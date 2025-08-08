@@ -63,3 +63,5 @@ src/
 - `svelte`: Svelte 5 with Runes support
 - `typescript`: TypeScript support
 - `vite`: Build tool and development server
+
+### Testing Deplyment on Vercel
