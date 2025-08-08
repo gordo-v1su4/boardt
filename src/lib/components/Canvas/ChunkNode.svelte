@@ -1,5 +1,5 @@
 <!--
-  ChunkNode.svelte - Custom SvelteFlow node for story chunks
+  ChunkNode.svelte - Custom SvelteFlow node for story chunks with Svelte 5 + Runes
   Task 7: Canvas Flow Architect - ChunkNode components for story sequences
 -->
 <script>
@@ -7,19 +7,16 @@
   import { storyChunksStore } from '../../stores/storyChunks.svelte.js';
   import { uiStore } from '../../stores/ui.svelte.js';
 
-  // Props from SvelteFlow
-  export let id;
-  export let data;
-  export let selected = false;
-  export let dragging = false;
+  // Props from SvelteFlow - modern Svelte 5 syntax
+  let { id, data, selected = false, dragging = false } = $props();
 
-  // Extract chunk data
-  $: chunk = data.chunk;
-  $: isSelected = selected || uiStore.isSelected(id);
-  $: chunkTypeColor = getChunkTypeColor(chunk?.chunkType);
-  $: hasImages = chunk?.images && chunk.images.length > 0;
-  $: imageCount = chunk?.images?.length || 0;
-  $: connectionCount = storyChunksStore.getChunkConnections(id).length;
+  // Extract chunk data using derived state
+  let chunk = $derived(data.chunk);
+  let isSelected = $derived(selected || uiStore.isSelected(id));
+  let chunkTypeColor = $derived(getChunkTypeColor(chunk?.chunkType));
+  let hasImages = $derived(chunk?.images && chunk.images.length > 0);
+  let imageCount = $derived(chunk?.images?.length || 0);
+  let connectionCount = $derived(storyChunksStore.getChunkConnections(id).length);
 
   /**
    * Get color based on chunk type
@@ -89,9 +86,10 @@
   class:selected={isSelected}
   class:dragging
   style="--chunk-color: {chunkTypeColor}"
-  on:click={handleSelect}
-  on:dblclick={handleDoubleClick}
-  on:contextmenu={handleContextMenu}
+  onclick={handleSelect}
+  ondblclick={handleDoubleClick}
+  oncontextmenu={handleContextMenu}
+  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(); } }}
   role="button"
   tabindex="0"
 >
@@ -134,7 +132,7 @@
   {:else}
     <div class="no-images">
       <span>No images</span>
-      <button class="add-image-btn" on:click|stopPropagation={() => console.log('Add image to chunk')}>
+      <button class="add-image-btn" onclick={(e) => { e.stopPropagation(); console.log('Add image to chunk'); }}>
         + Add
       </button>
     </div>

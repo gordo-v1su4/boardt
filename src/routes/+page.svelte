@@ -100,7 +100,7 @@
 						<button
 							class="tab-btn"
 							class:active={currentView === tab.id}
-							on:click={() => switchView(tab.id)}
+							onclick={() => switchView(tab.id)}
 							title="{tab.label} (Ctrl+{tabs.indexOf(tab) + 1})"
 						>
 							<span class="tab-icon">{tab.icon}</span>
@@ -112,7 +112,7 @@
 				<div class="nav-actions">
 					<button
 						class="action-btn"
-						on:click={() => uiStore.openSettingsDialog()}
+						onclick={() => uiStore.openSettingsDialog()}
 						title="Settings"
 					>
 						⚙️

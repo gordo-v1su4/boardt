@@ -28,6 +28,6 @@
   "dependencies": {
     "@fal-ai/client": "^1.0.0",
     "@rollup/rollup-win32-x64-msvc": "^4.46.2",
-    "@xyflow/svelte": "^0.1.0"
+    "@xyflow/svelte": "^1.2.2"
   }
 }

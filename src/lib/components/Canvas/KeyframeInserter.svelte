@@ -195,11 +195,18 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if uiStore.showKeyframeInserter}
-  <div class="modal-overlay" on:click|self={close}>
+  <div
+    class="modal-overlay"
+    onclick={(e) => { if (e.target === e.currentTarget) close(); }}
+    onkeydown={(e) => { if (e.key === 'Escape') close(); }}
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+  >
     <div class="keyframe-inserter">
       <div class="inserter-header">
         <h2>Insert Keyframe</h2>
-        <button class="close-btn" on:click={close} title="Close">×</button>
+        <button class="close-btn" onclick={close} title="Close">×</button>
       </div>
 
       <div class="inserter-content">
@@ -275,7 +282,7 @@
               ></textarea>
               <button
                 class="auto-generate-btn"
-                on:click={generateTransitionPrompt}
+                onclick={generateTransitionPrompt}
                 type="button"
               >
                 🎯 Auto-generate prompt
@@ -354,12 +361,12 @@
         </div>
 
         <div class="footer-actions">
-          <button class="btn secondary" on:click={close}>Cancel</button>
+          <button class="btn secondary" onclick={close}>Cancel</button>
           
           {#if !generatedImage}
             <button
               class="btn primary"
-              on:click={generateKeyframe}
+              onclick={generateKeyframe}
               disabled={!canInsert || isGenerating}
             >
               {#if isGenerating}
@@ -369,7 +376,7 @@
               {/if}
             </button>
           {:else}
-            <button class="btn success" on:click={insertKeyframe}>
+            <button class="btn success" onclick={insertKeyframe}>
               Insert Keyframe
             </button>
           {/if}

@@ -72,7 +72,8 @@
   class="chunk-card"
   class:compact
   style="--chunk-color: {chunkTypeColor}"
-  on:click={handleSelect}
+  onclick={handleSelect}
+  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(); } }}
   role="button"
   tabindex="0"
 >

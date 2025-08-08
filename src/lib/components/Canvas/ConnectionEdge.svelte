@@ -1,38 +1,34 @@
 <!--
-  ConnectionEdge.svelte - Custom SvelteFlow edge for story connections
+  ConnectionEdge.svelte - Custom SvelteFlow edge for story connections with Svelte 5 + Runes
   Task 7: Canvas Flow Architect - ConnectionEdge for visual story flow connections
 -->
 <script>
-  import { getBezierPath, EdgeLabelRenderer } from '@xyflow/svelte';
+  import { getBezierPath } from '@xyflow/svelte';
   import { uiStore } from '../../stores/ui.svelte.js';
   import { storyChunksStore } from '../../stores/storyChunks.svelte.js';
 
-  // Props from SvelteFlow
-  export let id;
-  export let sourceX;
-  export let sourceY;
-  export let targetX;
-  export let targetY;
-  export let sourcePosition;
-  export let targetPosition;
-  export let data;
-  export let selected = false;
+  // Props from SvelteFlow - modern Svelte 5 syntax
+  let { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected = false } = $props();
 
-  // Extract connection data
-  $: connection = data?.connection;
-  $: connectionType = connection?.connectionType || 'sequence';
-  $: label = connection?.label || '';
-  $: isSelected = selected || uiStore.isSelected(id);
+  // Extract connection data using derived state
+  let connection = $derived(data?.connection);
+  let connectionType = $derived(connection?.connectionType || 'sequence');
+  let label = $derived(connection?.label || '');
+  let isSelected = $derived(selected || uiStore.isSelected(id));
 
-  // Calculate bezier path
-  $: [edgePath, labelX, labelY] = getBezierPath({
+  // Calculate bezier path using derived state
+  let pathData = $derived(getBezierPath({
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition
-  });
+  }));
+  
+  let edgePath = $derived(pathData[0]);
+  let labelX = $derived(pathData[1]);
+  let labelY = $derived(pathData[2]);
 
   /**
    * Get edge style based on connection type
@@ -95,7 +91,8 @@
     uiStore.selectItems(id);
   }
 
-  $: edgeStyle = getEdgeStyle(connectionType);
+  // Use derived for edge style - modern Svelte 5 syntax
+  let edgeStyle = $derived(getEdgeStyle(connectionType));
 </script>
 
 <!-- Main edge path -->
@@ -109,40 +106,42 @@
   stroke-dasharray={edgeStyle.strokeDasharray}
   fill="none"
   marker-end="url(#arrowhead-{connectionType})"
-  on:click={handleSelect}
-  on:contextmenu={handleContextMenu}
+  onclick={handleSelect}
+  oncontextmenu={handleContextMenu}
+  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(); } }}
+  role="button"
+  tabindex="0"
 />
 
 <!-- Edge label -->
 {#if label || isSelected}
-  <EdgeLabelRenderer>
-    <div
-      class="edge-label"
-      class:selected={isSelected}
-      style="transform: translate(-50%, -50%) translate({labelX}px, {labelY}px)"
-      on:click={handleSelect}
-      on:contextmenu={handleContextMenu}
-      role="button"
-      tabindex="0"
-    >
-      <div class="label-content">
-        <span class="connection-icon">{getConnectionIcon(connectionType)}</span>
-        {#if label}
-          <span class="label-text">{label}</span>
-        {/if}
-        {#if isSelected}
-          <button
-            class="delete-btn"
-            on:click={handleDelete}
-            title="Delete connection"
-            aria-label="Delete connection"
-          >
-            ×
-          </button>
-        {/if}
-      </div>
+  <div
+    class="edge-label"
+    class:selected={isSelected}
+    style="transform: translate(-50%, -50%) translate({labelX}px, {labelY}px)"
+    onclick={handleSelect}
+    oncontextmenu={handleContextMenu}
+    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(); } }}
+    role="button"
+    tabindex="0"
+  >
+    <div class="label-content">
+      <span class="connection-icon">{getConnectionIcon(connectionType)}</span>
+      {#if label}
+        <span class="label-text">{label}</span>
+      {/if}
+      {#if isSelected}
+        <button
+          class="delete-btn"
+          onclick={handleDelete}
+          title="Delete connection"
+          aria-label="Delete connection"
+        >
+          ×
+        </button>
+      {/if}
     </div>
-  </EdgeLabelRenderer>
+  </div>
 {/if}
 
 <!-- Arrow markers for different connection types -->

@@ -518,7 +518,7 @@ export class StoryConnection {
 export class StoryboardProject {
   constructor(data = {}) {
     this.id = data.id || crypto.randomUUID();
-    this.name = data.name || 'Untitled Storyboard';
+    this.name = data.name !== undefined ? data.name : 'Untitled Storyboard';
     this.images = data.images ? data.images.map(img =>
       img instanceof StoryboardImage ? img : new StoryboardImage(img)
     ) : [];

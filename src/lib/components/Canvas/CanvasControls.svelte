@@ -2,28 +2,40 @@
   CanvasControls.svelte - Toolbar controls for the canvas
   Task 7: Canvas Flow Architect - Canvas controls for chunk management
 -->
-<script>
-  import { createEventDispatcher } from 'svelte';
+<script lang="ts">
   import { storyChunksStore } from '../../stores/storyChunks.svelte.js';
   import { uiStore } from '../../stores/ui.svelte.js';
 
-  const dispatch = createEventDispatcher();
+  // Props for Svelte 5
+  interface Props {
+    onaddchunk?: () => void;
+    oncreatesampledata?: () => void;
+  }
 
-  // Reactive state
-  $: chunkCount = storyChunksStore.chunkCount;
-  $: connectionCount = storyChunksStore.connectionCount;
-  $: selectedItems = uiStore.selectedItems;
-  $: hasSelection = uiStore.hasSelection;
-  $: canZoomIn = uiStore.canZoomIn;
-  $: canZoomOut = uiStore.canZoomOut;
-  $: showGrid = uiStore.showGrid;
-  $: snapToGrid = uiStore.snapToGrid;
+  let { onaddchunk, oncreatesampledata }: Props = $props();
+
+  // Reactive state using Svelte 5 Runes
+  let chunkCount = $derived(storyChunksStore.chunkCount);
+  let connectionCount = $derived(storyChunksStore.connectionCount);
+  let selectedItems = $derived(uiStore.selectedItems);
+  let hasSelection = $derived(uiStore.hasSelection);
+  let canZoomIn = $derived(uiStore.canZoomIn);
+  let canZoomOut = $derived(uiStore.canZoomOut);
+  let showGrid = $derived(uiStore.showGrid);
+  let snapToGrid = $derived(uiStore.snapToGrid);
 
   /**
    * Add new chunk
    */
   function addChunk() {
-    dispatch('addChunk');
+    onaddchunk?.();
+  }
+
+  /**
+   * Create sample data
+   */
+  function createSampleData() {
+    oncreatesampledata?.();
   }
 
   /**
@@ -75,7 +87,7 @@
   <div class="controls-section">
     <button
       class="control-btn primary"
-      on:click={addChunk}
+      onclick={addChunk}
       title="Add new chunk"
     >
       <span class="btn-icon">➕</span>
@@ -84,7 +96,7 @@
 
     <button
       class="control-btn"
-      on:click={() => uiStore.openChunkCreator()}
+      onclick={() => uiStore.openChunkCreator()}
       title="Create story sequence"
     >
       <span class="btn-icon">📽️</span>
@@ -93,11 +105,20 @@
 
     <button
       class="control-btn"
-      on:click={() => uiStore.openKeyframeInserter()}
+      onclick={() => uiStore.openKeyframeInserter()}
       title="Insert keyframe"
     >
       <span class="btn-icon">🎯</span>
       <span class="btn-text">Add Keyframe</span>
+    </button>
+
+    <button
+      class="control-btn secondary"
+      onclick={createSampleData}
+      title="Create sample story data"
+    >
+      <span class="btn-icon">🎬</span>
+      <span class="btn-text">Sample Data</span>
     </button>
   </div>
 
@@ -107,28 +128,28 @@
       <button
         class="control-btn small"
         class:disabled={!canZoomOut}
-        on:click={() => uiStore.zoomOut()}
+        onclick={() => uiStore.zoomOut()}
         disabled={!canZoomOut}
         title="Zoom out"
       >
         <span class="btn-icon">🔍-</span>
       </button>
-      
+
       <span class="zoom-level">{Math.round(uiStore.canvasZoom * 100)}%</span>
-      
+
       <button
         class="control-btn small"
         class:disabled={!canZoomIn}
-        on:click={() => uiStore.zoomIn()}
+        onclick={() => uiStore.zoomIn()}
         disabled={!canZoomIn}
         title="Zoom in"
       >
         <span class="btn-icon">🔍+</span>
       </button>
-      
+
       <button
         class="control-btn small"
-        on:click={() => uiStore.resetZoom()}
+        onclick={() => uiStore.resetZoom()}
         title="Reset zoom to 100%"
       >
         <span class="btn-icon">🎯</span>
@@ -139,7 +160,7 @@
       <button
         class="control-btn toggle"
         class:active={showGrid}
-        on:click={() => uiStore.toggleGrid()}
+        onclick={() => uiStore.toggleGrid()}
         title="Toggle grid"
       >
         <span class="btn-icon">⊞</span>
@@ -148,7 +169,7 @@
       <button
         class="control-btn toggle"
         class:active={snapToGrid}
-        on:click={() => uiStore.toggleSnapToGrid()}
+        onclick={() => uiStore.toggleSnapToGrid()}
         title="Toggle snap to grid"
       >
         <span class="btn-icon">🧲</span>
@@ -184,7 +205,7 @@
       {#if hasSelection}
         <button
           class="control-btn danger small"
-          on:click={deleteSelected}
+          onclick={deleteSelected}
           title="Delete selected items"
         >
           <span class="btn-icon">🗑️</span>
@@ -193,7 +214,7 @@
 
       <button
         class="control-btn"
-        on:click={validateConnections}
+        onclick={validateConnections}
         title="Validate story connections"
       >
         <span class="btn-icon">✅</span>
@@ -201,7 +222,7 @@
 
       <button
         class="control-btn"
-        on:click={exportCanvas}
+        onclick={exportCanvas}
         title="Export canvas"
       >
         <span class="btn-icon">📤</span>
@@ -209,7 +230,7 @@
 
       <button
         class="control-btn danger"
-        on:click={clearAll}
+        onclick={clearAll}
         title="Clear all"
       >
         <span class="btn-icon">🗑️</span>

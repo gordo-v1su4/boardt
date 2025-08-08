@@ -202,12 +202,19 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if showDialog}
-  <div class="modal-overlay" on:click|self={close}>
+  <div
+    class="modal-overlay"
+    onclick={(e) => { if (e.target === e.currentTarget) close(); }}
+    onkeydown={(e) => { if (e.key === 'Escape') close(); }}
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+  >
     <div class="export-dialog">
       <div class="dialog-header">
         <h2>Export Storyboard</h2>
         {#if !isExporting}
-          <button class="close-btn" on:click={close} title="Close">×</button>
+          <button class="close-btn" onclick={close} title="Close">×</button>
         {/if}
       </div>
 
@@ -341,10 +348,10 @@
           </div>
 
           <div class="footer-actions">
-            <button class="btn secondary" on:click={close}>Cancel</button>
+            <button class="btn secondary" onclick={close}>Cancel</button>
             <button
               class="btn primary"
-              on:click={startExport}
+              onclick={startExport}
               disabled={chunks.length === 0}
             >
               📤 Export {exportFormat.toUpperCase()}

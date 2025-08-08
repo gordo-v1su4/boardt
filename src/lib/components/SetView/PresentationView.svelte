@@ -110,7 +110,7 @@
             <button
               class="toggle-btn"
               class:active={viewMode === 'grid'}
-              on:click={() => viewMode = 'grid'}
+              onclick={() => viewMode = 'grid'}
               title="Grid view"
             >
               ⊞
@@ -118,7 +118,7 @@
             <button
               class="toggle-btn"
               class:active={viewMode === 'timeline'}
-              on:click={() => viewMode = 'timeline'}
+              onclick={() => viewMode = 'timeline'}
               title="Timeline view"
             >
               ⏱️
@@ -126,7 +126,7 @@
             <button
               class="toggle-btn"
               class:active={viewMode === 'flow'}
-              on:click={() => viewMode = 'flow'}
+              onclick={() => viewMode = 'flow'}
               title="Flow diagram"
             >
               🌊
@@ -149,10 +149,10 @@
           </div>
 
           <div class="action-buttons">
-            <button class="btn secondary" on:click={exportPresentation}>
+            <button class="btn secondary" onclick={exportPresentation}>
               📤 Export
             </button>
-            <button class="btn primary" on:click={startPresentation} disabled={chunks.length === 0}>
+            <button class="btn primary" onclick={startPresentation} disabled={chunks.length === 0}>
               ▶️ Start Presentation
             </button>
           </div>
@@ -167,7 +167,7 @@
           <div class="empty-icon">📽️</div>
           <h3>No story chunks to present</h3>
           <p>Create some chunks in the canvas view to build your presentation</p>
-          <button class="btn primary" on:click={() => uiStore.switchView('canvas')}>
+          <button class="btn primary" onclick={() => uiStore.switchView('canvas')}>
             Go to Canvas
           </button>
         </div>
@@ -304,10 +304,10 @@
       <!-- Presentation Controls -->
       <div class="presentation-controls">
         <div class="controls-left">
-          <button class="control-btn" on:click={endPresentation} title="Exit presentation">
+          <button class="control-btn" onclick={endPresentation} title="Exit presentation">
             ❌
           </button>
-          <button class="control-btn" on:click={() => presentationModeStore.toggleFullscreen()} title="Toggle fullscreen">
+          <button class="control-btn" onclick={() => presentationModeStore.toggleFullscreen()} title="Toggle fullscreen">
             {presentationModeStore.fullscreen ? '🪟' : '⛶'}
           </button>
         </div>
@@ -315,7 +315,7 @@
         <div class="controls-center">
           <button
             class="control-btn"
-            on:click={previousSlide}
+            onclick={previousSlide}
             disabled={!presentationModeStore.canGoPrevious}
             title="Previous slide"
           >
@@ -328,7 +328,7 @@
           
           <button
             class="control-btn"
-            on:click={nextSlide}
+            onclick={nextSlide}
             disabled={!presentationModeStore.canGoNext}
             title="Next slide"
           >
@@ -349,7 +349,7 @@
           <button
             class="thumbnail"
             class:active={index === currentSlide}
-            on:click={() => goToSlide(index)}
+            onclick={() => goToSlide(index)}
             title="Go to slide {index + 1}"
           >
             <div class="thumbnail-number">{index + 1}</div>

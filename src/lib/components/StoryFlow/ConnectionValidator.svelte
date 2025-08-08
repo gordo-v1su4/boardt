@@ -289,11 +289,18 @@
 </script>
 
 {#if showValidator}
-  <div class="modal-overlay" on:click|self={close}>
+  <div
+    class="modal-overlay"
+    onclick={(e) => { if (e.target === e.currentTarget) close(); }}
+    onkeydown={(e) => { if (e.key === 'Escape') close(); }}
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+  >
     <div class="validator-dialog">
       <div class="dialog-header">
         <h2>Story Flow Validation</h2>
-        <button class="close-btn" on:click={close} title="Close">×</button>
+        <button class="close-btn" onclick={close} title="Close">×</button>
       </div>
 
       <div class="dialog-content">
@@ -346,7 +353,7 @@
             <div class="section-header">
               <h3>Issues Found</h3>
               {#if fixableCount > 0}
-                <button class="auto-fix-btn" on:click={autoFixIssues}>
+                <button class="auto-fix-btn" onclick={autoFixIssues}>
                   🔧 Auto-fix {fixableCount} issues
                 </button>
               {/if}
@@ -382,7 +389,7 @@
                       {#if issue.chunkId}
                         <button
                           class="navigate-btn"
-                          on:click={() => navigateToChunk(issue.chunkId)}
+                          onclick={() => navigateToChunk(issue.chunkId)}
                           title="Navigate to chunk"
                         >
                           🎯
@@ -408,8 +415,8 @@
           <span>Last validated: {new Date().toLocaleTimeString()}</span>
         </div>
         <div class="footer-actions">
-          <button class="btn secondary" on:click={close}>Close</button>
-          <button class="btn primary" on:click={() => location.reload()}>
+          <button class="btn secondary" onclick={close}>Close</button>
+          <button class="btn primary" onclick={() => location.reload()}>
             🔄 Re-validate
           </button>
         </div>

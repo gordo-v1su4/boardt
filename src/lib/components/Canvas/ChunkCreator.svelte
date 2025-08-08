@@ -2,26 +2,31 @@
   ChunkCreator.svelte - Multi-prompt story sequence creator
   Task 8: Story Sequence Manager - ChunkCreator for multi-prompt story generation
 -->
-<script>
-  import { createEventDispatcher } from 'svelte';
+<script lang="ts">
   import { storyChunksStore } from '../../stores/storyChunks.svelte.js';
   import { imageGenerationStore } from '../../stores/imageGeneration.svelte.js';
   import { uiStore } from '../../stores/ui.svelte.js';
 
-  const dispatch = createEventDispatcher();
+  // Props for Svelte 5
+  interface Props {
+    onChunkCreated?: (chunk: any) => void;
+    onCancel?: () => void;
+  }
 
-  // Component state
-  let chunkTitle = '';
-  let chunkDescription = '';
-  let chunkType = 'sequence';
-  let prompts = [''];
-  let isGenerating = false;
-  let generationProgress = 0;
-  let generatedImages = [];
+  let { onChunkCreated, onCancel }: Props = $props();
 
-  // Reactive state
-  $: canCreate = chunkTitle.trim() && prompts.some(p => p.trim());
-  $: totalPrompts = prompts.filter(p => p.trim()).length;
+  // Component state using Svelte 5 Runes
+  let chunkTitle = $state('');
+  let chunkDescription = $state('');
+  let chunkType = $state('sequence');
+  let prompts = $state(['']);
+  let isGenerating = $state(false);
+  let generationProgress = $state(0);
+  let generatedImages = $state([]);
+  // Derived state
+  let canCreate = $derived(() => chunkTitle.trim() && prompts.some(p => p.trim()));
+  let totalPrompts = $derived(() => prompts.filter(p => p.trim()).length);
+  let isChoiceChunk = $derived(() => chunkType === 'choice');
 
   /**
    * Add new prompt input
@@ -151,11 +156,18 @@
 <svelte:window on:keydown={handleKeydown} />
 
 {#if uiStore.showChunkCreator}
-  <div class="modal-overlay" on:click|self={close}>
+  <div
+    class="modal-overlay"
+    onclick={(e) => { if (e.target === e.currentTarget) close(); }}
+    onkeydown={(e) => { if (e.key === 'Escape') close(); }}
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
+  >
     <div class="chunk-creator">
       <div class="creator-header">
         <h2>Create Story Sequence</h2>
-        <button class="close-btn" on:click={close} title="Close">×</button>
+        <button class="close-btn" onclick={close} title="Close">×</button>
       </div>
 
       <div class="creator-content">
@@ -197,7 +209,7 @@
         <div class="form-section">
           <div class="section-header">
             <h3>Image Prompts ({totalPrompts})</h3>
-            <button class="add-prompt-btn" on:click={addPrompt}>+ Add Prompt</button>
+            <button class="add-prompt-btn" onclick={addPrompt}>+ Add Prompt</button>
           </div>
 
           <div class="prompts-list">
@@ -205,8 +217,7 @@
               <div class="prompt-item">
                 <div class="prompt-number">{index + 1}</div>
                 <textarea
-                  bind:value={prompt}
-                  on:input={(e) => updatePrompt(index, e.target.value)}
+                  bind:value={prompts[index]}
                   placeholder="Describe the image you want to generate..."
                   rows="2"
                   maxlength="500"
@@ -214,7 +225,7 @@
                 {#if prompts.length > 1}
                   <button
                     class="remove-prompt-btn"
-                    on:click={() => removePrompt(index)}
+                    onclick={() => removePrompt(index)}
                     title="Remove prompt"
                   >
                     ×
@@ -269,12 +280,12 @@
         </div>
 
         <div class="footer-actions">
-          <button class="btn secondary" on:click={close}>Cancel</button>
+          <button class="btn secondary" onclick={close}>Cancel</button>
           
           {#if generatedImages.length === 0}
             <button
               class="btn primary"
-              on:click={generateImages}
+              onclick={generateImages}
               disabled={!canCreate || isGenerating}
             >
               {#if isGenerating}
@@ -284,7 +295,7 @@
               {/if}
             </button>
           {:else}
-            <button class="btn success" on:click={createChunk}>
+            <button class="btn success" onclick={createChunk}>
               Create Chunk
             </button>
           {/if}
