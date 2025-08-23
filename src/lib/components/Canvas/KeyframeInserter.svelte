@@ -2,29 +2,34 @@
   KeyframeInserter.svelte - Insert keyframes between existing chunks
   Task 8: Story Sequence Manager - KeyframeInserter for adding frames between chunks
 -->
-<script>
+<script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { storyChunksStore } from '../../stores/storyChunks.svelte.js';
   import { imageGenerationStore } from '../../stores/imageGeneration.svelte.js';
   import { uiStore } from '../../stores/ui.svelte.js';
+  import { StoryChunk } from '../../types/storyboard.js';
 
   const dispatch = createEventDispatcher();
 
-  // Component state
-  let selectedSourceChunk = null;
-  let selectedTargetChunk = null;
-  let keyframeTitle = '';
-  let keyframePrompt = '';
-  let transitionType = 'smooth'; // 'smooth', 'cut', 'fade'
-  let isGenerating = false;
-  let generatedImage = null;
+  // Component state using Svelte 5 runes
+  let selectedSourceChunk = $state<StoryChunk | null>(null);
+  let selectedTargetChunk = $state<StoryChunk | null>(null);
+  let keyframeTitle = $state('');
+  let keyframePrompt = $state('');
+  let transitionType = $state('smooth'); // 'smooth', 'cut', 'fade'
+  let isGenerating = $state(false);
+  let generatedImage = $state<any>(null);
 
-  // Reactive state
-  $: chunks = storyChunksStore.chunks;
-  $: connections = storyChunksStore.connections;
-  $: canInsert = selectedSourceChunk && selectedTargetChunk && keyframeTitle.trim() && keyframePrompt.trim();
-  $: existingConnection = selectedSourceChunk && selectedTargetChunk ? 
-    connections.find(c => c.sourceChunkId === selectedSourceChunk.id && c.targetChunkId === selectedTargetChunk.id) : null;
+  // Reactive state using Svelte 5 runes
+  let chunks = $derived(storyChunksStore.chunks);
+  let connections = $derived(storyChunksStore.connections);
+  let canInsert = $derived(selectedSourceChunk && selectedTargetChunk && keyframeTitle.trim() && keyframePrompt.trim());
+  let existingConnection = $derived(() => {
+    if (!selectedSourceChunk || !selectedTargetChunk) return null;
+    const sourceId = selectedSourceChunk.id;
+    const targetId = selectedTargetChunk.id;
+    return connections.find(c => c.sourceChunkId === sourceId && c.targetChunkId === targetId) || null;
+  });
 
   /**
    * Get available target chunks for selected source
@@ -66,7 +71,7 @@
    * Insert keyframe between chunks
    */
   function insertKeyframe() {
-    if (!canInsert || !generatedImage) return;
+    if (!canInsert || !generatedImage || !selectedSourceChunk || !selectedTargetChunk) return;
 
     // Calculate position between source and target chunks
     const sourcePos = selectedSourceChunk.position;
@@ -91,8 +96,8 @@
     });
 
     // Remove existing connection
-    if (existingConnection) {
-      storyChunksStore.removeConnection(existingConnection.id);
+    if (existingConnection && existingConnection !== null && typeof existingConnection === 'object' && 'id' in existingConnection) {
+      storyChunksStore.removeConnection((existingConnection as any).id);
     }
 
     // Create new connections through keyframe
@@ -182,14 +187,18 @@
     }
   }
 
-  // Auto-generate title and prompt when chunks are selected
-  $: if (selectedSourceChunk && selectedTargetChunk && !keyframeTitle) {
-    generateKeyframeTitle();
-  }
+  // Auto-generate title and prompt when chunks are selected using $effect
+  $effect(() => {
+    if (selectedSourceChunk && selectedTargetChunk && !keyframeTitle) {
+      generateKeyframeTitle();
+    }
+  });
 
-  $: if (selectedSourceChunk && selectedTargetChunk && !keyframePrompt) {
-    generateTransitionPrompt();
-  }
+  $effect(() => {
+    if (selectedSourceChunk && selectedTargetChunk && !keyframePrompt) {
+      generateTransitionPrompt();
+    }
+  });
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -238,7 +247,7 @@
             </div>
           </div>
 
-          {#if existingConnection}
+          {#if existingConnection !== null}
             <div class="connection-info">
               <span class="info-icon">ℹ️</span>
               <span>This will replace the existing connection between these chunks</span>

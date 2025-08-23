@@ -1,6 +1,8 @@
 <!-- ChunkEdge.svelte - src/lib/components/Canvas/ChunkEdge.svelte -->
 <script lang="ts">
 	import { getBezierPath } from '@xyflow/svelte';
+	import { uiStore } from '../../stores/ui.svelte.js';
+	import { storyChunksStore } from '../../stores/storyChunks.svelte.js';
 
 	// Props from SvelteFlow using Svelte 5 $props()
 	let {
@@ -27,8 +29,11 @@
 	}));
 
 	// Get edge styling based on connection type using Svelte 5 $derived()
-	let edgeStyle = $derived(getEdgeStyle(data?.type));
-	let hasAnimation = $derived(data?.type === 'choice' || data?.type === 'branch');
+	let edgeStyle = $derived(getEdgeStyle(data?.type || data?.connectionType || 'sequence'));
+	let connectionType = $derived(data?.connectionType || data?.type || 'sequence');
+	let connectionLabel = $derived(data?.label || '');
+	let isSelected = $derived(selected || uiStore.isSelected(id));
+	let hasAnimation = $derived(connectionType === 'choice' || connectionType === 'branch');
 
 	function getEdgeStyle(type) {
 		const baseStyle = {
@@ -61,23 +66,41 @@
 		}
 	}
 
-	function getConnectionLabel(type) {
-		switch(type) {
-			case 'sequence': return '';
-			case 'choice': return '?';
-			case 'branch': return '→';
-			default: return '';
-		}
+	/**
+	 * Get connection type icon
+	 */
+	function getConnectionIcon(type) {
+		const icons = {
+			sequence: '→',
+			choice: '⚡',
+			branch: '🌿'
+		};
+		return icons[type] || icons.sequence;
 	}
 
-	function handleEdgeClick(event) {
-		event.stopPropagation();
-		console.log('Edge clicked:', id);
+	/**
+	 * Handle edge selection
+	 */
+	function handleSelect() {
+		uiStore.selectItems(id);
 	}
 
-	function handleEdgeDoubleClick(event) {
+	/**
+	 * Handle edge deletion
+	 */
+	function handleDelete(event) {
 		event.stopPropagation();
-		console.log('Edit connection:', id);
+		storyChunksStore.removeConnection(id);
+	}
+
+	/**
+	 * Handle context menu
+	 */
+	function handleContextMenu(event) {
+		event.preventDefault();
+		event.stopPropagation();
+		uiStore.showContextMenu({ x: event.clientX, y: event.clientY });
+		uiStore.selectItems(id);
 	}
 </script>
 
@@ -85,21 +108,24 @@
 <path
 	{id}
 	class="chunk-edge"
-	class:selected
+	class:selected={isSelected}
 	class:animated={hasAnimation}
 	d={edgePath}
 	stroke={edgeStyle.stroke}
 	stroke-width={edgeStyle.strokeWidth}
 	stroke-dasharray={edgeStyle.strokeDasharray}
 	fill="none"
-	marker-end="url(#arrowhead-{data?.type || 'default'})"
-			style={typeof style === 'string' ? style : ''}
-	onclick={handleEdgeClick}
-	ondblclick={handleEdgeDoubleClick}
+	marker-end="url(#arrowhead-{connectionType})"
+	style={typeof style === 'string' ? style : ''}
+	onclick={handleSelect}
+	oncontextmenu={handleContextMenu}
+	onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(); } }}
+	role="button"
+	tabindex="0"
 />
 
 <!-- Animated Dots for Choice and Branch connections -->
-{#if data?.type === 'choice'}
+{#if connectionType === 'choice'}
 	<circle
 		r="3"
 		fill="#f59e0b"
@@ -111,7 +137,7 @@
 	</circle>
 {/if}
 
-{#if data?.type === 'branch'}
+{#if connectionType === 'branch'}
 	<circle
 		r="2"
 		fill="#10b981"
@@ -123,17 +149,38 @@
 	</circle>
 {/if}
 
-	<!-- Edge Label (for complex connections) -->
-	{#if data?.label || getConnectionLabel(data?.type)}
-		<div
-			class="edge-label"
-			class:choice-label={data?.type === 'choice'}
-			class:branch-label={data?.type === 'branch'}
-			style="transform: translate(-50%, -50%) translate({labelX}px, {labelY}px); position: absolute; pointer-events: all; z-index: 1000;"
-		>
-			{data?.label || getConnectionLabel(data?.type)}
+<!-- Edge Label -->
+{#if connectionLabel || isSelected}
+	<div
+		class="edge-label"
+		class:selected={isSelected}
+		class:choice-label={connectionType === 'choice'}
+		class:branch-label={connectionType === 'branch'}
+		style="transform: translate(-50%, -50%) translate({labelX}px, {labelY}px); position: absolute; pointer-events: all; z-index: 1000;"
+		onclick={handleSelect}
+		oncontextmenu={handleContextMenu}
+		onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(); } }}
+		role="button"
+		tabindex="0"
+	>
+		<div class="label-content">
+			<span class="connection-icon">{getConnectionIcon(connectionType)}</span>
+			{#if connectionLabel}
+				<span class="label-text">{connectionLabel}</span>
+			{/if}
+			{#if isSelected}
+				<button
+					class="delete-btn"
+					onclick={handleDelete}
+					title="Delete connection"
+					aria-label="Delete connection"
+				>
+					×
+				</button>
+			{/if}
 		</div>
-	{/if}
+	</div>
+{/if}
 
 <!-- Custom Arrowheads (defined in parent component or global) -->
 <svelte:head>
@@ -146,28 +193,21 @@
 <style>
 	.chunk-edge {
 		cursor: pointer;
-		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		transition: all 0.2s ease;
 	}
 
 	.chunk-edge:hover {
-		stroke-width: 3;
-		filter: drop-shadow(0 0 6px currentColor);
+		stroke-width: 4;
+		filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 	}
 
 	.chunk-edge.selected {
 		stroke-width: 4;
-		filter: drop-shadow(0 0 8px currentColor);
-		animation: pulse 2s infinite;
+		filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
 	}
 
-	.chunk-edge.animated.choice-dot {
-		stroke-dasharray: 8,4;
-		animation: dash-choice 1.5s linear infinite;
-	}
-
-	.chunk-edge.animated.branch-dot {
-		stroke-dasharray: 4,4;
-		animation: dash-branch 2s linear infinite;
+	.chunk-edge.animated {
+		animation: connectionAppear 0.5s ease-out;
 	}
 
 	.connection-dot {
@@ -184,40 +224,96 @@
 
 	/* Edge Labels */
 	.edge-label {
+		position: absolute;
+		pointer-events: all;
+		cursor: pointer;
+		z-index: 1000;
+	}
+
+	.label-content {
+		display: flex;
+		align-items: center;
+		gap: 4px;
 		background: #1c1917;
 		border: 1px solid #292524;
+		border-radius: 12px;
+		padding: 4px 8px;
+		font-size: 12px;
+		font-weight: 500;
+		color: #e4e4e7;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		transition: all 0.2s ease;
+		white-space: nowrap;
+	}
+
+	.edge-label:hover .label-content {
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+		transform: scale(1.05);
+	}
+
+	.edge-label.selected .label-content {
+		border-color: #3b82f6;
+		box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+	}
+
+	.connection-icon {
+		font-size: 14px;
+		line-height: 1;
+	}
+
+	.label-text {
+		max-width: 100px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.delete-btn {
+		background: #ef4444;
+		color: white;
+		border: none;
 		border-radius: 50%;
-		width: 24px;
-		height: 24px;
+		width: 18px;
+		height: 18px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		font-size: 12px;
 		font-weight: bold;
-		color: #fafaf9;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 		cursor: pointer;
-		transition: all 0.2s;
+		transition: all 0.2s ease;
+		margin-left: 4px;
 	}
 
-	.edge-label:hover {
-		transform: translate(-50%, -50%) scale(1.1) !important;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+	.delete-btn:hover {
+		background: #dc2626;
+		transform: scale(1.1);
 	}
 
-	.choice-label {
+	.choice-label .label-content {
 		background: #f59e0b;
 		border-color: #d97706;
 		color: #000000;
 	}
 
-	.branch-label {
+	.branch-label .label-content {
 		background: #10b981;
 		border-color: #059669;
 		color: #000000;
 	}
 
 	/* Animations */
+	@keyframes connectionAppear {
+		from {
+			opacity: 0;
+			stroke-dasharray: 1000;
+			stroke-dashoffset: 1000;
+		}
+		to {
+			opacity: 1;
+			stroke-dashoffset: 0;
+		}
+	}
+
 	@keyframes pulse {
 		0%, 100% {
 			opacity: 1;
@@ -227,7 +323,19 @@
 		}
 	}
 
-	@keyframes dash-choice {
+	/* Different styles for connection types */
+	.chunk-edge[stroke="#f59e0b"] {
+		/* Choice connections have a pulsing effect */
+		animation: connectionAppear 0.5s ease-out, pulse 2s infinite;
+	}
+
+	.chunk-edge[stroke="#10b981"] {
+		/* Branch connections have a flowing effect */
+		stroke-dasharray: 8, 4;
+		animation: connectionAppear 0.5s ease-out, flow 3s linear infinite;
+	}
+
+	@keyframes flow {
 		0% {
 			stroke-dashoffset: 0;
 		}
@@ -236,31 +344,25 @@
 		}
 	}
 
-	@keyframes dash-branch {
-		0% {
-			stroke-dashoffset: 0;
-		}
-		100% {
-			stroke-dashoffset: 8;
-		}
-	}
-
 	/* Responsive adjustments */
 	@media (max-width: 768px) {
-		.edge-label {
-			width: 20px;
-			height: 20px;
+		.label-content {
 			font-size: 10px;
+			padding: 2px 6px;
 		}
-		
+
+		.connection-icon {
+			font-size: 12px;
+		}
+
 		.connection-dot {
 			r: 2;
 		}
-		
+
 		.choice-dot {
 			r: 2.5;
 		}
-		
+
 		.branch-dot {
 			r: 1.5;
 		}

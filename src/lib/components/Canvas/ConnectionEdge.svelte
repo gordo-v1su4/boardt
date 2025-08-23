@@ -2,13 +2,13 @@
   ConnectionEdge.svelte - Custom SvelteFlow edge for story connections with Svelte 5 + Runes
   Task 7: Canvas Flow Architect - ConnectionEdge for visual story flow connections
 -->
-<script>
+<script lang="ts">
   import { getBezierPath } from '@xyflow/svelte';
   import { uiStore } from '../../stores/ui.svelte.js';
   import { storyChunksStore } from '../../stores/storyChunks.svelte.js';
 
   // Props from SvelteFlow - modern Svelte 5 syntax
-  let { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected = false } = $props();
+  let { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data = {}, selected = false } = $props();
 
   // Extract connection data using derived state
   let connection = $derived(data?.connection);

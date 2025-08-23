@@ -182,6 +182,12 @@
 	class="modal-backdrop"
 	bind:this={modalRef}
 	onclick={handleBackdropClick}
+	onkeydown={(e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			handleBackdropClick(e);
+		}
+	}}
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby="modal-title"
@@ -206,9 +212,9 @@
 		<div class="modal-content">
 			<!-- Chunk Type Selection -->
 			<div class="section">
-				<label class="section-label" id="chunk-type-label">Chunk Type</label>
+				<label class="section-label" for="chunk-type-first">Chunk Type</label>
 				<div class="type-grid" role="radiogroup" aria-labelledby="chunk-type-label">
-					{#each chunkTypes as type}
+					{#each chunkTypes as type, index}
 						<button
 							class="type-card"
 							class:selected={selectedType === type.id}
@@ -217,6 +223,7 @@
 							role="radio"
 							aria-checked={selectedType === type.id}
 							aria-label={type.name}
+							id={index === 0 ? 'chunk-type-first' : undefined}
 						>
 							<div class="type-icon">{type.icon}</div>
 							<div class="type-name">{type.name}</div>

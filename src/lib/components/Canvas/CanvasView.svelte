@@ -64,20 +64,22 @@
 
   // Sync derived values to state arrays for SvelteFlow binding
   $effect(() => {
+    const currentDerivedNodes = derivedNodes();
     // Simple change detection to prevent infinite loops
-    if (nodes.length !== derivedNodes.length || 
-        derivedNodes.some((node, i) => nodes[i]?.id !== node.id)) {
+    if (nodes.length !== currentDerivedNodes.length ||
+        currentDerivedNodes.some((node, i) => nodes[i]?.id !== node.id)) {
       nodes.length = 0;
-      nodes.push(...derivedNodes);
+      nodes.push(...currentDerivedNodes);
     }
   });
 
   $effect(() => {
-    // Simple change detection to prevent infinite loops  
-    if (edges.length !== derivedEdges.length ||
-        derivedEdges.some((edge, i) => edges[i]?.id !== edge.id)) {
+    const currentDerivedEdges = derivedEdges();
+    // Simple change detection to prevent infinite loops
+    if (edges.length !== currentDerivedEdges.length ||
+        currentDerivedEdges.some((edge, i) => edges[i]?.id !== edge.id)) {
       edges.length = 0;
-      edges.push(...derivedEdges);
+      edges.push(...currentDerivedEdges);
     }
   });
 
@@ -257,7 +259,7 @@
     const centerY = -uiStore.canvasPosition.y + (window.innerHeight / 2) / uiStore.canvasZoom;
 
     const newChunk = storyChunksStore.addChunk({
-      title: `Chunk ${storyChunksStore.chunkCount + 1}`,
+      title: `Chunk ${storyChunksStore.chunkCount() + 1}`,
       position: { x: centerX, y: centerY }
     });
 
@@ -345,7 +347,6 @@
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       fitView
-      snapToGrid={snapToGrid}
       snapGrid={[gridSize, gridSize]}
       onnodeclick={onNodeClick}
       onnodedragstop={onNodeDragStop}
@@ -353,7 +354,6 @@
       onconnect={onConnect}
       onpaneclick={onPaneClick}
       onpanecontextmenu={onPaneContextMenu}
-      onviewportchange={onViewportChange}
     >
       <!-- Background -->
       <Background

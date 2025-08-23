@@ -13,6 +13,7 @@
 	import ChunkNode from '$lib/components/Canvas/ChunkNode.svelte';
 	import ChunkEdge from '$lib/components/Canvas/ChunkEdge.svelte';
 	import ChunkCreator from '$lib/components/Canvas/ChunkCreator.svelte';
+	import KeyframeInserter from '$lib/components/Canvas/KeyframeInserter.svelte';
 	
 	// Svelte 5 Runes for state management
 	let nodes = $state([
@@ -123,6 +124,7 @@
 
 	// Event handlers (simplified for now)
 	function onConnect(connection) {
+		console.log('Connection made:', connection);
 		// Create new connection
 		const newEdge = {
 			id: `e${connection.source}-${connection.target}`,
@@ -134,6 +136,7 @@
 			selected: false
 		};
 		edges = [...edges, newEdge];
+		console.log('New edge added:', newEdge);
 	}
 
 	// Canvas actions
@@ -327,8 +330,8 @@
 			minZoom={0.1}
 			maxZoom={2}
 			class="dark-flow"
-
-
+			nodesConnectable={true}
+			elementsSelectable={true}
 		>
 			<Background gap={20} />
 			<Controls />
@@ -341,6 +344,9 @@
 				</button>
 				<button class="btn btn-primary" onclick={() => showCreateModal = true}>
 					Create Chunk
+				</button>
+				<button class="btn btn-warning" onclick={() => console.log('Current nodes:', nodes, 'Current edges:', edges)}>
+					Debug Connections
 				</button>
 				<button class="btn btn-danger" onclick={clearCanvas}>
 					Clear Canvas
@@ -396,6 +402,9 @@
 			onCreate={handleCreateChunk}
 		/>
 	{/if}
+
+	<!-- Keyframe Inserter Modal -->
+	<KeyframeInserter />
 </main>
 
 <style>
@@ -582,5 +591,14 @@
 
 	.btn-secondary:hover {
 		background: #52525b;
+	}
+
+	.btn-warning {
+		background: #f59e0b;  /* Zinc amber */
+		color: white;
+	}
+
+	.btn-warning:hover {
+		background: #d97706;
 	}
 </style>

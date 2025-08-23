@@ -74,7 +74,7 @@
 	}
 </script>
 
-<div 
+<div
 	class="chunk-node"
 	class:selected
 	class:dragging
@@ -84,6 +84,15 @@
 	onclick={handleNodeClick}
 	ondblclick={handleNodeDoubleClick}
 	oncontextmenu={handleContextMenu}
+	onkeydown={(e) => {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			handleNodeClick(e);
+		} else if (e.key === 'Delete' || e.key === 'Backspace') {
+			e.preventDefault();
+			// Handle delete if there's a delete function
+		}
+	}}
 	role="button"
 	tabindex="0"
 >
@@ -99,12 +108,14 @@
 		position={Position.Left}
 		class="chunk-handle chunk-handle-left"
 		style="background: {connectionColor};"
+		id="target-handle"
 	/>
 	<Handle
 		type="source"
 		position={Position.Right}
 		class="chunk-handle chunk-handle-right"
 		style="background: {connectionColor};"
+		id="source-handle"
 	/>
 
 	<!-- Output Indicator -->
@@ -264,11 +275,20 @@
 
 	/* Connection Handles */
 	:global(.chunk-handle) {
-		width: 14px !important;
-		height: 14px !important;
-		border: 2px solid #292524 !important;
+		width: 18px !important;
+		height: 18px !important;
+		border: 3px solid #292524 !important;
 		border-radius: 50% !important;
 		transition: all 0.2s !important;
+		cursor: crosshair !important;
+		z-index: 100 !important;
+	}
+
+	:global(.chunk-handle:hover) {
+		width: 22px !important;
+		height: 22px !important;
+		border-width: 4px !important;
+		box-shadow: 0 0 10px currentColor !important;
 	}
 
 	:global(.chunk-handle-left) {
