@@ -9,6 +9,11 @@ const config = {
 
 	kit: {
 		adapter: vercel()
+	},
+
+	// Enable Svelte 5 features
+	compilerOptions: {
+		runes: true
 	}
 };
 

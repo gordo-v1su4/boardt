@@ -1,641 +1,781 @@
-<!--
-  ChunkCreator.svelte - Multi-prompt story sequence creator
-  Task 8: Story Sequence Manager - ChunkCreator for multi-prompt story generation
--->
+<!-- ChunkCreator.svelte - src/lib/components/Canvas/ChunkCreator.svelte -->
 <script lang="ts">
-  import { storyChunksStore } from '../../stores/storyChunks.svelte.js';
-  import { imageGenerationStore } from '../../stores/imageGeneration.svelte.js';
-  import { uiStore } from '../../stores/ui.svelte.js';
+	import { createEventDispatcher, onMount } from 'svelte';
 
-  // Props for Svelte 5
-  interface Props {
-    onChunkCreated?: (chunk: any) => void;
-    onCancel?: () => void;
-  }
+	// Event dispatcher for component communication
+	const dispatch = createEventDispatcher();
 
-  let { onChunkCreated, onCancel }: Props = $props();
+	// Props using Svelte 5 $props()
+	let { onClose = () => {}, onCreate = () => {} } = $props();
 
-  // Component state using Svelte 5 Runes
-  let chunkTitle = $state('');
-  let chunkDescription = $state('');
-  let chunkType = $state('sequence');
-  let prompts = $state(['']);
-  let isGenerating = $state(false);
-  let generationProgress = $state(0);
-  let generatedImages = $state([]);
-  // Derived state
-  let canCreate = $derived(() => chunkTitle.trim() && prompts.some(p => p.trim()));
-  let totalPrompts = $derived(() => prompts.filter(p => p.trim()).length);
-  let isChoiceChunk = $derived(() => chunkType === 'choice');
+	// Form state using Svelte 5 Runes
+	let selectedType = $state('sequence');
+	let chunkTitle = $state('');
+	let chunkDescription = $state('');
+	let generateImage = $state(false);
+	let imagePrompt = $state('');
+	let tags = $state('');
+	let duration = $state('5');
+	let characters = $state('');
 
-  /**
-   * Add new prompt input
-   */
-  function addPrompt() {
-    prompts = [...prompts, ''];
-  }
+	// Validation state
+	let errors = $state({
+		title: '',
+		description: '',
+		imagePrompt: '',
+		duration: ''
+	});
+	let isSubmitting = $state(false);
 
-  /**
-   * Remove prompt at index
-   */
-  function removePrompt(index) {
-    if (prompts.length > 1) {
-      prompts = prompts.filter((_, i) => i !== index);
-    }
-  }
+	// Modal reference for focus management
+	let modalRef: HTMLDivElement;
+	let titleInput: HTMLInputElement;
 
-  /**
-   * Update prompt at index
-   */
-  function updatePrompt(index, value) {
-    prompts[index] = value;
-    prompts = [...prompts]; // Trigger reactivity
-  }
+	// Chunk type definitions
+	const chunkTypes = [
+		{
+			id: 'sequence',
+			name: 'Sequence',
+			icon: '📺',
+			description: 'A linear story progression that flows naturally to the next scene.',
+			color: '#3b82f6',
+			examples: ['Opening scene', 'Character introduction', 'Plot development']
+		},
+		{
+			id: 'choice', 
+			name: 'Choice',
+			icon: '🔀',
+			description: 'A decision point where the story can branch into multiple paths.',
+			color: '#f59e0b',
+			examples: ['Moral dilemma', 'Multiple solutions', 'Character decisions']
+		},
+		{
+			id: 'keyframe',
+			name: 'Keyframe',
+			icon: '🎯', 
+			description: 'A critical moment or key visual that anchors the story.',
+			color: '#10b981',
+			examples: ['Climactic moment', 'Visual reveal', 'Emotional peak']
+		}
+	];
 
-  /**
-   * Generate images for all prompts
-   */
-  async function generateImages() {
-    if (!canCreate) return;
+	// Computed properties
+	let selectedTypeInfo = $derived(chunkTypes.find(type => type.id === selectedType));
+	let isValid = $derived(chunkTitle.trim().length > 0 && Object.values(errors).every(error => error === ''));
+	let tagList = $derived(tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0));
 
-    isGenerating = true;
-    generationProgress = 0;
-    generatedImages = [];
+	// Validation
+	function validateForm() {
+		const newErrors = {
+			title: '',
+			description: '',
+			imagePrompt: '',
+			duration: ''
+		};
 
-    const validPrompts = prompts.filter(p => p.trim());
-    
-    try {
-      for (let i = 0; i < validPrompts.length; i++) {
-        const prompt = validPrompts[i];
-        generationProgress = (i / validPrompts.length) * 100;
+		if (!chunkTitle.trim()) {
+			newErrors.title = 'Title is required';
+		} else if (chunkTitle.trim().length < 3) {
+			newErrors.title = 'Title must be at least 3 characters';
+		} else if (chunkTitle.trim().length > 100) {
+			newErrors.title = 'Title must be less than 100 characters';
+		}
 
-        const image = await imageGenerationStore.generateImage(prompt);
-        if (image) {
-          generatedImages = [...generatedImages, image];
-        }
+		if (chunkDescription.length > 500) {
+			newErrors.description = 'Description must be less than 500 characters';
+		}
 
-        // Small delay between generations
-        if (i < validPrompts.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-      }
+		if (generateImage && imagePrompt.trim().length === 0) {
+			newErrors.imagePrompt = 'Image prompt is required when generating images';
+		}
 
-      generationProgress = 100;
-    } catch (error) {
-      console.error('Batch generation failed:', error);
-    } finally {
-      isGenerating = false;
-    }
-  }
+		if (duration && (isNaN(Number(duration)) || Number(duration) < 1 || Number(duration) > 60)) {
+			newErrors.duration = 'Duration must be between 1 and 60 seconds';
+		}
 
-  /**
-   * Create chunk with generated images
-   */
-  function createChunk() {
-    if (!canCreate) return;
+		errors = newErrors;
+		return Object.values(newErrors).every(error => error === '');
+	}
 
-    // Calculate position for new chunk
-    const centerX = -uiStore.canvasPosition.x + (window.innerWidth / 2) / uiStore.canvasZoom;
-    const centerY = -uiStore.canvasPosition.y + (window.innerHeight / 2) / uiStore.canvasZoom;
+	// Event handlers
+	function handleTypeSelect(type: any) {
+		selectedType = type.id;
+		
+		// Auto-populate example content for better UX
+		if (!chunkTitle.trim() && type.examples && type.examples.length > 0) {
+			chunkTitle = type.examples[0];
+		}
+	}
 
-    const newChunk = storyChunksStore.addChunk({
-      title: chunkTitle.trim(),
-      description: chunkDescription.trim(),
-      chunkType,
-      images: generatedImages,
-      position: { x: centerX, y: centerY }
-    });
+	function handleSubmit() {
+		if (!validateForm()) {
+			return;
+		}
 
-    // Select the new chunk
-    storyChunksStore.selectChunk(newChunk.id);
-    uiStore.selectItems(newChunk.id);
+		isSubmitting = true;
 
-    // Close the creator
-    close();
+		const chunkData = {
+			type: selectedType,
+			title: chunkTitle.trim(),
+			description: chunkDescription.trim(),
+			hasImage: generateImage,
+			imagePrompt: generateImage ? imagePrompt.trim() : '',
+			tags: tagList,
+			metadata: {
+				duration: duration ? `${duration}s` : '5s',
+				characters: characters.trim() || undefined,
+				createdAt: new Date().toISOString()
+			}
+		};
 
-    dispatch('chunkCreated', { chunk: newChunk });
-  }
+		// Simulate async operation
+		setTimeout(() => {
+			onCreate(chunkData);
+			dispatch('create', chunkData);
+			isSubmitting = false;
+			handleClose();
+		}, 500);
+	}
 
-  /**
-   * Close the creator
-   */
-  function close() {
-    uiStore.closeChunkCreator();
-    reset();
-  }
+	function handleClose() {
+		onClose();
+		dispatch('close');
+	}
 
-  /**
-   * Reset form
-   */
-  function reset() {
-    chunkTitle = '';
-    chunkDescription = '';
-    chunkType = 'sequence';
-    prompts = [''];
-    isGenerating = false;
-    generationProgress = 0;
-    generatedImages = [];
-  }
+	function handleKeydown(event: KeyboardEvent) {
+		// Close modal on Escape
+		if (event.key === 'Escape') {
+			handleClose();
+		}
+		// Submit on Ctrl/Cmd + Enter
+		if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+			handleSubmit();
+		}
+	}
 
-  /**
-   * Handle keyboard shortcuts
-   */
-  function handleKeydown(event) {
-    if (event.key === 'Escape') {
-      close();
-    } else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-      if (generatedImages.length > 0) {
-        createChunk();
-      } else if (canCreate) {
-        generateImages();
-      }
-    }
-  }
+	function handleBackdropClick(event: any) {
+		if (event.target === modalRef) {
+			handleClose();
+		}
+	}
+
+	// Reactive validation
+	$effect(() => {
+		if (chunkTitle || chunkDescription || imagePrompt || duration) {
+			validateForm();
+		}
+	});
+
+	// Focus management
+	onMount(() => {
+		titleInput?.focus();
+		document.addEventListener('keydown', handleKeydown);
+
+		return () => {
+			document.removeEventListener('keydown', handleKeydown);
+		};
+	});
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
+<!-- Modal Backdrop -->
+<div
+	class="modal-backdrop"
+	bind:this={modalRef}
+	onclick={handleBackdropClick}
+	role="dialog"
+	aria-modal="true"
+	aria-labelledby="modal-title"
+	tabindex="-1"
+>
+	<div class="modal-container">
+		<!-- Modal Header -->
+		<div class="modal-header">
+			<h2 id="modal-title" class="modal-title">
+				Create New Story Chunk
+			</h2>
+						<button
+				class="close-button"
+				onclick={handleClose}
+				aria-label="Close modal"
+			>
+				✕
+			</button>
+		</div>
 
-{#if uiStore.showChunkCreator}
-  <div
-    class="modal-overlay"
-    onclick={(e) => { if (e.target === e.currentTarget) close(); }}
-    onkeydown={(e) => { if (e.key === 'Escape') close(); }}
-    role="dialog"
-    aria-modal="true"
-    tabindex="-1"
-  >
-    <div class="chunk-creator">
-      <div class="creator-header">
-        <h2>Create Story Sequence</h2>
-        <button class="close-btn" onclick={close} title="Close">×</button>
-      </div>
+		<!-- Modal Content -->
+		<div class="modal-content">
+			<!-- Chunk Type Selection -->
+			<div class="section">
+				<label class="section-label" id="chunk-type-label">Chunk Type</label>
+				<div class="type-grid" role="radiogroup" aria-labelledby="chunk-type-label">
+					{#each chunkTypes as type}
+						<button
+							class="type-card"
+							class:selected={selectedType === type.id}
+							style:--type-color={type.color}
+							onclick={() => handleTypeSelect(type)}
+							role="radio"
+							aria-checked={selectedType === type.id}
+							aria-label={type.name}
+						>
+							<div class="type-icon">{type.icon}</div>
+							<div class="type-name">{type.name}</div>
+							<div class="type-description">{type.description}</div>
 
-      <div class="creator-content">
-        <!-- Chunk metadata -->
-        <div class="form-section">
-          <div class="form-group">
-            <label for="chunk-title">Chunk Title *</label>
-            <input
-              id="chunk-title"
-              type="text"
-              bind:value={chunkTitle}
-              placeholder="Enter chunk title..."
-              maxlength="100"
-            />
-          </div>
+							{#if selectedType === type.id}
+								<div class="type-examples">
+									<strong>Examples:</strong>
+									{#each type.examples as example}
+										<span class="example-tag">{example}</span>
+									{/each}
+								</div>
+							{/if}
+						</button>
+					{/each}
+				</div>
+			</div>
 
-          <div class="form-group">
-            <label for="chunk-description">Description</label>
-            <textarea
-              id="chunk-description"
-              bind:value={chunkDescription}
-              placeholder="Describe this story sequence..."
-              rows="2"
-              maxlength="500"
-            ></textarea>
-          </div>
+			<!-- Chunk Details -->
+			<div class="section">
+				<label class="section-label" for="chunk-title">
+					Chunk Title <span class="required">*</span>
+				</label>
+				<input
+					id="chunk-title"
+					bind:this={titleInput}
+					bind:value={chunkTitle}
+					type="text"
+					placeholder="Enter a descriptive title for this chunk..."
+					class="text-input"
+					class:error={errors.title}
+					maxlength="100"
+				/>
+				{#if errors.title}
+					<div class="error-message">{errors.title}</div>
+				{/if}
+			</div>
 
-          <div class="form-group">
-            <label for="chunk-type">Chunk Type</label>
-            <select id="chunk-type" bind:value={chunkType}>
-              <option value="sequence">Sequence - Linear story progression</option>
-              <option value="choice">Choice - Branching decision point</option>
-              <option value="keyframe">Keyframe - Important story moment</option>
-            </select>
-          </div>
-        </div>
+			<div class="section">
+				<label class="section-label" for="chunk-description">
+					Description
+				</label>
+				<textarea
+					id="chunk-description"
+					bind:value={chunkDescription}
+					placeholder="Describe what happens in this chunk..."
+					class="textarea-input"
+					class:error={errors.description}
+					rows="3"
+					maxlength="500"
+				></textarea>
+				{#if errors.description}
+					<div class="error-message">{errors.description}</div>
+				{/if}
+				<div class="character-count">
+					{chunkDescription.length}/500
+				</div>
+			</div>
 
-        <!-- Prompts section -->
-        <div class="form-section">
-          <div class="section-header">
-            <h3>Image Prompts ({totalPrompts})</h3>
-            <button class="add-prompt-btn" onclick={addPrompt}>+ Add Prompt</button>
-          </div>
+			<!-- AI Image Generation -->
+			<div class="section">
+				<div class="checkbox-section">
+					<input
+						id="generate-image"
+						bind:checked={generateImage}
+						type="checkbox"
+						class="checkbox-input"
+					/>
+					<label for="generate-image" class="checkbox-label">
+						🎨 Generate AI Image
+					</label>
+				</div>
 
-          <div class="prompts-list">
-            {#each prompts as prompt, index}
-              <div class="prompt-item">
-                <div class="prompt-number">{index + 1}</div>
-                <textarea
-                  bind:value={prompts[index]}
-                  placeholder="Describe the image you want to generate..."
-                  rows="2"
-                  maxlength="500"
-                ></textarea>
-                {#if prompts.length > 1}
-                  <button
-                    class="remove-prompt-btn"
-                    onclick={() => removePrompt(index)}
-                    title="Remove prompt"
-                  >
-                    ×
-                  </button>
-                {/if}
-              </div>
-            {/each}
-          </div>
-        </div>
+				{#if generateImage}
+					<div class="subsection">
+						<label class="section-label" for="image-prompt">
+							Image Prompt <span class="required">*</span>
+						</label>
+						<textarea
+							id="image-prompt"
+							bind:value={imagePrompt}
+							placeholder="Describe the image you want to generate..."
+							class="textarea-input"
+							class:error={errors.imagePrompt}
+							rows="2"
+						></textarea>
+						{#if errors.imagePrompt}
+							<div class="error-message">{errors.imagePrompt}</div>
+						{/if}
+					</div>
+				{/if}
+			</div>
 
-        <!-- Generation progress -->
-        {#if isGenerating}
-          <div class="generation-progress">
-            <div class="progress-header">
-              <span>Generating images...</span>
-              <span>{Math.round(generationProgress)}%</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: {generationProgress}%"></div>
-            </div>
-          </div>
-        {/if}
+			<!-- Metadata -->
+			<div class="metadata-section">
+				<div class="metadata-grid">
+					<div class="metadata-field">
+						<label class="section-label" for="duration">Duration (seconds)</label>
+						<input
+							id="duration"
+							bind:value={duration}
+							type="number"
+							min="1"
+							max="60"
+							class="number-input"
+							class:error={errors.duration}
+						/>
+						{#if errors.duration}
+							<div class="error-message">{errors.duration}</div>
+						{/if}
+					</div>
 
-        <!-- Generated images preview -->
-        {#if generatedImages.length > 0}
-          <div class="form-section">
-            <h3>Generated Images ({generatedImages.length})</h3>
-            <div class="images-preview">
-              {#each generatedImages as image, index}
-                <div class="preview-item">
-                  <img src={image.url} alt={image.prompt} />
-                  <div class="image-info">
-                    <div class="image-index">{index + 1}</div>
-                    <div class="image-prompt">{image.prompt.slice(0, 50)}...</div>
-                  </div>
-                </div>
-              {/each}
-            </div>
-          </div>
-        {/if}
-      </div>
+					<div class="metadata-field">
+						<label class="section-label" for="characters">Characters</label>
+						<input
+							id="characters"
+							bind:value={characters}
+							type="text"
+							placeholder="Main characters in scene"
+							class="text-input"
+						/>
+					</div>
+				</div>
+			</div>
 
-      <div class="creator-footer">
-        <div class="footer-info">
-          {#if generatedImages.length > 0}
-            <span class="success-text">✓ {generatedImages.length} images generated</span>
-          {:else if totalPrompts > 0}
-            <span class="info-text">Ready to generate {totalPrompts} images</span>
-          {:else}
-            <span class="warning-text">Add at least one prompt</span>
-          {/if}
-        </div>
+			<div class="section">
+				<label class="section-label" for="tags">Tags (comma-separated)</label>
+				<input
+					id="tags"
+					bind:value={tags}
+					type="text"
+					placeholder="action, outdoor, night, dramatic..."
+					class="text-input"
+				/>
+				{#if tagList.length > 0}
+					<div class="tag-preview">
+						{#each tagList as tag}
+							<span class="tag">{tag}</span>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		</div>
 
-        <div class="footer-actions">
-          <button class="btn secondary" onclick={close}>Cancel</button>
-          
-          {#if generatedImages.length === 0}
-            <button
-              class="btn primary"
-              onclick={generateImages}
-              disabled={!canCreate || isGenerating}
-            >
-              {#if isGenerating}
-                Generating...
-              {:else}
-                Generate Images
-              {/if}
-            </button>
-          {:else}
-            <button class="btn success" onclick={createChunk}>
-              Create Chunk
-            </button>
-          {/if}
-        </div>
-      </div>
-    </div>
-  </div>
-{/if}
+		<!-- Modal Footer -->
+		<div class="modal-footer">
+			<div class="footer-info">
+				<span class="keyboard-hint">
+					Press <kbd>Esc</kbd> to cancel, <kbd>Ctrl+Enter</kbd> to create
+				</span>
+			</div>
+			
+			<div class="footer-actions">
+				<button
+					class="btn btn-secondary"
+					onclick={handleClose}
+					disabled={isSubmitting}
+				>
+					Cancel
+				</button>
+				<button
+					class="btn btn-primary"
+					class:loading={isSubmitting}
+					onclick={handleSubmit}
+					disabled={!isValid || isSubmitting}
+				>
+					{#if isSubmitting}
+						<span class="loading-spinner"></span>
+						Creating...
+					{:else}
+						Create Chunk
+					{/if}
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
 
 <style>
-  .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-    padding: 20px;
-  }
+	/* Modal Backdrop */
+	.modal-backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(9, 9, 11, 0.85);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		padding: 20px;
+		backdrop-filter: blur(4px);
+	}
 
-  .chunk-creator {
-    background: #27272a; /* zinc-800 */
-    border: 1px solid #3f3f46; /* zinc-700 */
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    width: 100%;
-    max-width: 600px;
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
+	.modal-container {
+		background: #1c1917;
+		border-radius: 16px;
+		border: 1px solid #292524;
+		box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+		max-width: 600px;
+		width: 100%;
+		max-height: 90vh;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+		animation: modalSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	}
 
-  .creator-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    border-bottom: 1px solid #3f3f46; /* zinc-700 */
-  }
+	@keyframes modalSlideIn {
+		from {
+			opacity: 0;
+			transform: translateY(20px) scale(0.95);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0) scale(1);
+		}
+	}
 
-  .creator-header h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #fafafa; /* zinc-50 */
-  }
+	/* Modal Header */
+	.modal-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 24px;
+		border-bottom: 1px solid #292524;
+		background: #09090b;
+	}
 
-  .close-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #a1a1aa; /* zinc-400 */
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-  }
+	.modal-title {
+		color: #fafaf9;
+		font-size: 18px;
+		font-weight: 600;
+		margin: 0;
+	}
 
-  .close-btn:hover {
-    background: #3f3f46; /* zinc-700 */
-    color: #e4e4e7; /* zinc-200 */
-  }
+	.close-button {
+		background: none;
+		border: none;
+		color: #a1a1aa;
+		font-size: 20px;
+		cursor: pointer;
+		padding: 4px;
+		border-radius: 4px;
+		transition: all 0.2s;
+	}
 
-  .creator-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-  }
+	.close-button:hover {
+		background: #292524;
+		color: #fafaf9;
+	}
 
-  .form-section {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
+	/* Modal Content */
+	.modal-content {
+		flex: 1;
+		overflow-y: auto;
+		padding: 24px;
+		color: #fafaf9;
+	}
 
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
+	.section {
+		margin-bottom: 24px;
+	}
 
-  .form-group label {
-    font-size: 14px;
-    font-weight: 500;
-    color: #374151;
-  }
+	.subsection {
+		margin-top: 16px;
+		padding-left: 16px;
+		border-left: 2px solid #292524;
+	}
 
-  .form-group input,
-  .form-group textarea,
-  .form-group select {
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 14px;
-    transition: border-color 0.2s ease;
-  }
+	.section-label {
+		display: block;
+		font-size: 14px;
+		font-weight: 500;
+		color: #e4e4e7;
+		margin-bottom: 8px;
+	}
 
-  .form-group input:focus,
-  .form-group textarea:focus,
-  .form-group select:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
+	.required {
+		color: #ef4444;
+	}
 
-  .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
+	/* Type Selection */
+	.type-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		gap: 12px;
+	}
 
-  .section-header h3 {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #1f2937;
-  }
+	.type-card {
+		background: #292524;
+		border: 2px solid #3f3f46;
+		border-radius: 12px;
+		padding: 16px;
+		cursor: pointer;
+		transition: all 0.2s;
+		text-align: left;
+	}
 
-  .add-prompt-btn {
-    background: #f3f4f6;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
+	.type-card:hover {
+		background: #3f3f46;
+		border-color: #52525b;
+	}
 
-  .add-prompt-btn:hover {
-    background: #e5e7eb;
-  }
+	.type-card.selected {
+		border-color: var(--type-color);
+		background: rgba(34, 197, 94, 0.1);
+		box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+	}
 
-  .prompts-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
+	.type-icon {
+		font-size: 24px;
+		margin-bottom: 8px;
+	}
 
-  .prompt-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-  }
+	.type-name {
+		font-weight: 600;
+		font-size: 16px;
+		color: #fafaf9;
+		margin-bottom: 4px;
+	}
 
-  .prompt-number {
-    background: #3b82f6;
-    color: white;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 600;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
+	.type-description {
+		font-size: 12px;
+		color: #a1a1aa;
+		line-height: 1.4;
+	}
 
-  .prompt-item textarea {
-    flex: 1;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    padding: 8px 10px;
-    font-size: 13px;
-    resize: vertical;
-    min-height: 40px;
-  }
+	.type-examples {
+		margin-top: 12px;
+		padding-top: 8px;
+		border-top: 1px solid #3f3f46;
+		font-size: 11px;
+	}
 
-  .remove-prompt-btn {
-    background: #fee2e2;
-    border: 1px solid #fecaca;
-    border-radius: 4px;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    color: #dc2626;
-    cursor: pointer;
-    flex-shrink: 0;
-    margin-top: 2px;
-    transition: all 0.2s ease;
-  }
+	.example-tag {
+		display: inline-block;
+		background: var(--type-color);
+		color: #ffffff;
+		padding: 2px 6px;
+		border-radius: 4px;
+		margin: 2px 2px 2px 0;
+		font-size: 10px;
+	}
 
-  .remove-prompt-btn:hover {
-    background: #fecaca;
-  }
+	/* Form Inputs */
+	.text-input,
+	.textarea-input,
+	.number-input {
+		width: 100%;
+		padding: 12px;
+		background: #292524;
+		border: 1px solid #3f3f46;
+		border-radius: 8px;
+		color: #fafaf9;
+		font-size: 14px;
+		transition: all 0.2s;
+	}
 
-  .generation-progress {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 16px;
-  }
+	.text-input:focus,
+	.textarea-input:focus,
+	.number-input:focus {
+		outline: none;
+		border-color: #22c55e;
+		box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+	}
 
-  .progress-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #374151;
-  }
+	.text-input.error,
+	.textarea-input.error,
+	.number-input.error {
+		border-color: #ef4444;
+	}
 
-  .progress-bar {
-    background: #e5e7eb;
-    border-radius: 4px;
-    height: 8px;
-    overflow: hidden;
-  }
+	.textarea-input {
+		resize: vertical;
+		min-height: 80px;
+	}
 
-  .progress-fill {
-    background: #3b82f6;
-    height: 100%;
-    transition: width 0.3s ease;
-  }
+	.character-count {
+		text-align: right;
+		font-size: 11px;
+		color: #71717a;
+		margin-top: 4px;
+	}
 
-  .images-preview {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 12px;
-  }
+	.error-message {
+		color: #ef4444;
+		font-size: 12px;
+		margin-top: 4px;
+	}
 
-  .preview-item {
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    overflow: hidden;
-  }
+	/* Checkbox */
+	.checkbox-section {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 8px;
+	}
 
-  .preview-item img {
-    width: 100%;
-    height: 80px;
-    object-fit: cover;
-  }
+			.checkbox-input {
+		width: 18px;
+		height: 18px;
+		accent-color: #22c55e;
+		background: #292524;
+		border: 1px solid #3f3f46;
+	}
 
-  .image-info {
-    padding: 8px;
-  }
+	.checkbox-label {
+		font-size: 14px;
+		color: #e4e4e7;
+		cursor: pointer;
+	}
 
-  .image-index {
-    font-size: 12px;
-    font-weight: 600;
-    color: #3b82f6;
-    margin-bottom: 2px;
-  }
+	/* Metadata */
+	.metadata-section {
+		border-top: 1px solid #292524;
+		padding-top: 16px;
+	}
 
-  .image-prompt {
-    font-size: 11px;
-    color: #6b7280;
-    line-height: 1.3;
-  }
+	.metadata-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 16px;
+	}
 
-  .creator-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    border-top: 1px solid #e5e7eb;
-    background: #f9fafb;
-  }
+	.metadata-field {
+		display: flex;
+		flex-direction: column;
+	}
 
-  .footer-info {
-    font-size: 14px;
-  }
+	/* Tags */
+	.tag-preview {
+		margin-top: 8px;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+	}
 
-  .success-text {
-    color: #059669;
-    font-weight: 500;
-  }
+	.tag {
+		background: #4b5563;
+		color: #d1d5db;
+		padding: 2px 8px;
+		border-radius: 12px;
+		font-size: 11px;
+		font-weight: 500;
+	}
 
-  .info-text {
-    color: #3b82f6;
-  }
+	/* Modal Footer */
+	.modal-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 20px 24px;
+		border-top: 1px solid #374151;
+		background: #111827;
+	}
 
-  .warning-text {
-    color: #d97706;
-  }
+	.footer-info {
+		font-size: 12px;
+		color: #6b7280;
+	}
 
-  .footer-actions {
-    display: flex;
-    gap: 12px;
-  }
+	.keyboard-hint kbd {
+		background: #374151;
+		border: 1px solid #4b5563;
+		border-radius: 3px;
+		padding: 1px 4px;
+		font-size: 10px;
+		font-family: monospace;
+	}
 
-  .btn {
-    border: none;
-    border-radius: 8px;
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
+	.footer-actions {
+		display: flex;
+		gap: 12px;
+	}
 
-  .btn.secondary {
-    background: #f3f4f6;
-    color: #374151;
-  }
+	/* Buttons */
+	.btn {
+		padding: 10px 20px;
+		border: none;
+		border-radius: 8px;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
 
-  .btn.secondary:hover {
-    background: #e5e7eb;
-  }
+	.btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
 
-  .btn.primary {
-    background: #3b82f6;
-    color: white;
-  }
+	.btn-secondary {
+		background: #4b5563;
+		color: #d1d5db;
+	}
 
-  .btn.primary:hover:not(:disabled) {
-    background: #2563eb;
-  }
+	.btn-secondary:hover:not(:disabled) {
+		background: #6b7280;
+	}
 
-  .btn.success {
-    background: #059669;
-    color: white;
-  }
+	.btn-primary {
+		background: #3b82f6;
+		color: #ffffff;
+	}
 
-  .btn.success:hover {
-    background: #047857;
-  }
+	.btn-primary:hover:not(:disabled) {
+		background: #2563eb;
+	}
 
-  .btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+	.btn-primary.loading {
+		cursor: not-allowed;
+	}
+
+	.loading-spinner {
+		width: 14px;
+		height: 14px;
+		border: 2px solid #ffffff;
+		border-top: 2px solid transparent;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
+	}
+
+	/* Responsive Design */
+	@media (max-width: 768px) {
+		.modal-container {
+			margin: 10px;
+			max-height: calc(100vh - 20px);
+		}
+
+		.type-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.metadata-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.modal-footer {
+			flex-direction: column;
+			gap: 12px;
+			align-items: stretch;
+		}
+
+		.footer-actions {
+			justify-content: stretch;
+		}
+
+		.footer-actions .btn {
+			flex: 1;
+		}
+	}
 </style>

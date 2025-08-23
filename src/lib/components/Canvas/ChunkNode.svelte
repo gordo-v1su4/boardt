@@ -1,333 +1,458 @@
-<!--
-  ChunkNode.svelte - Custom SvelteFlow node for story chunks with Svelte 5 + Runes
-  Task 7: Canvas Flow Architect - ChunkNode components for story sequences
--->
-<script>
-  import { Handle, Position } from '@xyflow/svelte';
-  import { storyChunksStore } from '../../stores/storyChunks.svelte.js';
-  import { uiStore } from '../../stores/ui.svelte.js';
+<!-- ChunkNode.svelte - src/lib/components/Canvas/ChunkNode.svelte -->
+<script lang="ts">
+	import { Handle, Position } from '@xyflow/svelte';
 
-  // Props from SvelteFlow - modern Svelte 5 syntax
-  let { id, data, selected = false, dragging = false } = $props();
+	// Props from SvelteFlow using Svelte 5 $props()
+	let { data, id, selected = false, dragging = false } = $props();
 
-  // Extract chunk data using derived state
-  let chunk = $derived(data.chunk);
-  let isSelected = $derived(selected || uiStore.isSelected(id));
-  let chunkTypeColor = $derived(getChunkTypeColor(chunk?.chunkType));
-  let hasImages = $derived(chunk?.images && chunk.images.length > 0);
-  let imageCount = $derived(chunk?.images?.length || 0);
-  let connectionCount = $derived(storyChunksStore.getChunkConnections(id).length);
+	// Reactive chunk styling based on type using Svelte 5 $derived()
+	let chunkStyle = $derived(getChunkStyle(data?.type));
+	let typeIcon = $derived(getTypeIcon(data?.type));
+	let connectionColor = $derived(getConnectionColor(data?.type));
 
-  /**
-   * Get color based on chunk type
-   */
-  function getChunkTypeColor(type) {
-    const colors = {
-      sequence: '#3b82f6', // blue
-      choice: '#f59e0b',   // amber
-      keyframe: '#10b981'  // emerald
-    };
-    return colors[type] || colors.sequence;
-  }
+	function getChunkStyle(type) {
+		const baseStyle = {
+			borderColor: '#3f3f46',
+			shadowColor: 'rgba(63, 63, 70, 0.3)'
+		};
 
-  /**
-   * Handle chunk selection
-   */
-  function handleSelect() {
-    storyChunksStore.selectChunk(id);
-    uiStore.selectItems(id);
-  }
+		switch(type) {
+			case 'sequence':
+				return {
+					borderColor: '#22c55e',  /* Zinc green */
+					shadowColor: 'rgba(34, 197, 94, 0.3)'
+				};
+			case 'choice':
+				return {
+					borderColor: '#f59e0b',  /* Zinc amber */
+					shadowColor: 'rgba(245, 158, 11, 0.3)'
+				};
+			case 'keyframe':
+				return {
+					borderColor: '#06b6d4',  /* Zinc cyan */
+					shadowColor: 'rgba(6, 182, 212, 0.3)'
+				};
+			default:
+				return baseStyle;
+		}
+	}
 
-  /**
-   * Handle double-click to edit
-   */
-  function handleDoubleClick() {
-    // Open chunk editor (to be implemented)
-    console.log('Edit chunk:', id);
-  }
+	function getTypeIcon(type) {
+		switch(type) {
+			case 'sequence': return '📺';
+			case 'choice': return '🔀'; 
+			case 'keyframe': return '🎯';
+			default: return '📝';
+		}
+	}
 
-  /**
-   * Handle context menu
-   */
-  function handleContextMenu(event) {
-    event.preventDefault();
-    uiStore.showContextMenu({ x: event.clientX, y: event.clientY });
-    uiStore.selectItems(id);
-  }
+	function getConnectionColor(type) {
+		switch(type) {
+			case 'sequence': return '#22c55e';  /* Zinc green */
+			case 'choice': return '#f59e0b';   /* Zinc amber */
+			case 'keyframe': return '#06b6d4'; /* Zinc cyan */
+			default: return '#3f3f46';          /* Zinc 700 */
+		}
+	}
 
-  /**
-   * Get chunk type icon
-   */
-  function getChunkTypeIcon(type) {
-    const icons = {
-      sequence: '📽️',
-      choice: '🔀',
-      keyframe: '🎯'
-    };
-    return icons[type] || icons.sequence;
-  }
+	// Handle node interactions
+	function handleNodeClick(event) {
+		// Prevent default to avoid SvelteFlow selection issues
+		event.stopPropagation();
+	}
 
-  /**
-   * Truncate text to fit in node
-   */
-  function truncateText(text, maxLength = 30) {
-    if (!text) return '';
-    return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
-  }
+	function handleNodeDoubleClick(event) {
+		event.stopPropagation();
+		// Could trigger edit mode here
+		console.log('Edit chunk:', id);
+	}
+
+	function handleContextMenu(event) {
+		event.preventDefault();
+		// Could show context menu here
+		console.log('Context menu for chunk:', id);
+	}
 </script>
 
-<!-- Input handles for connections -->
-<Handle type="target" position={Position.Top} id="top" />
-<Handle type="target" position={Position.Left} id="left" />
-
-<!-- Main chunk node -->
-<div
-  class="chunk-node"
-  class:selected={isSelected}
-  class:dragging
-  style="--chunk-color: {chunkTypeColor}"
-  onclick={handleSelect}
-  ondblclick={handleDoubleClick}
-  oncontextmenu={handleContextMenu}
-  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(); } }}
-  role="button"
-  tabindex="0"
+<div 
+	class="chunk-node"
+	class:selected
+	class:dragging
+	style:--border-color={chunkStyle.borderColor}
+	style:--shadow-color={chunkStyle.shadowColor}
+	style:--connection-color={connectionColor}
+	onclick={handleNodeClick}
+	ondblclick={handleNodeDoubleClick}
+	oncontextmenu={handleContextMenu}
+	role="button"
+	tabindex="0"
 >
-  <!-- Header -->
-  <div class="chunk-header">
-    <div class="chunk-type">
-      <span class="chunk-icon">{getChunkTypeIcon(chunk?.chunkType)}</span>
-      <span class="chunk-type-label">{chunk?.chunkType || 'sequence'}</span>
-    </div>
-    <div class="chunk-stats">
-      <span class="image-count" title="Images">{imageCount}📷</span>
-      <span class="connection-count" title="Connections">{connectionCount}🔗</span>
-    </div>
-  </div>
+	<!-- Input/Output Indicators -->
+	<div class="io-indicator io-input">
+		<div class="io-label">IN</div>
+		<div class="io-connector" style="background: {connectionColor};"></div>
+	</div>
 
-  <!-- Title -->
-  <div class="chunk-title">
-    {truncateText(chunk?.title || 'Untitled Chunk', 25)}
-  </div>
+	<!-- Connection Handles -->
+	<Handle
+		type="target"
+		position={Position.Left}
+		class="chunk-handle chunk-handle-left"
+		style="background: {connectionColor};"
+	/>
+	<Handle
+		type="source"
+		position={Position.Right}
+		class="chunk-handle chunk-handle-right"
+		style="background: {connectionColor};"
+	/>
 
-  <!-- Description -->
-  {#if chunk?.description}
-    <div class="chunk-description">
-      {truncateText(chunk.description, 50)}
-    </div>
-  {/if}
+	<!-- Output Indicator -->
+	<div class="io-indicator io-output">
+		<div class="io-connector" style="background: {connectionColor};"></div>
+		<div class="io-label">OUT</div>
+	</div>
 
-  <!-- Image preview -->
-  {#if hasImages}
-    <div class="image-preview">
-      {#each chunk.images.slice(0, 3) as image, index}
-        <div class="preview-image" style="z-index: {3 - index}">
-          <img src={image.url} alt={image.prompt} loading="lazy" />
-        </div>
-      {/each}
-      {#if imageCount > 3}
-        <div class="more-images">+{imageCount - 3}</div>
-      {/if}
-    </div>
-  {:else}
-    <div class="no-images">
-      <span>No images</span>
-      <button class="add-image-btn" onclick={(e) => { e.stopPropagation(); console.log('Add image to chunk'); }}>
-        + Add
-      </button>
-    </div>
-  {/if}
+	<!-- Chunk Header -->
+	<div class="chunk-header">
+		<div class="chunk-type">
+			<span class="type-icon">{typeIcon}</span>
+			<span class="type-label">{data?.type || 'chunk'}</span>
+		</div>
+		
+		{#if selected}
+			<div class="selection-indicator">✓</div>
+		{/if}
+	</div>
+	
+	<!-- Chunk Content -->
+	<div class="chunk-content">
+		<div class="chunk-title">
+			{data?.title || 'Untitled Chunk'}
+		</div>
+		
+		{#if data?.description}
+			<div class="chunk-description">
+				{data.description}
+			</div>
+		{/if}
 
-  <!-- Footer with metadata -->
-  <div class="chunk-footer">
-    <div class="chunk-id">{id.slice(0, 8)}</div>
-    <div class="chunk-timestamp">
-      {chunk?.updatedAt ? new Date(chunk.updatedAt).toLocaleDateString() : ''}
-    </div>
-  </div>
+		{#if data?.hasImage}
+			<div class="chunk-image-placeholder">
+				<div class="image-icon">🖼️</div>
+				<div class="image-text">AI Generated Image</div>
+			</div>
+		{/if}
+
+		{#if data?.metadata}
+			<div class="chunk-metadata">
+				<div class="metadata-item">
+					<span class="metadata-key">Duration:</span>
+					<span class="metadata-value">{data.metadata.duration || '5s'}</span>
+				</div>
+				{#if data.metadata.characters}
+					<div class="metadata-item">
+						<span class="metadata-key">Characters:</span>
+						<span class="metadata-value">{data.metadata.characters}</span>
+					</div>
+				{/if}
+			</div>
+		{/if}
+	</div>
+
+	<!-- Chunk Footer -->
+	{#if data?.tags && data.tags.length > 0}
+		<div class="chunk-footer">
+			{#each data.tags as tag}
+				<span class="chunk-tag">{tag}</span>
+			{/each}
+		</div>
+	{/if}
+
+	<!-- Connection Indicator for Choice nodes -->
+	{#if data?.type === 'choice' && data?.choices}
+		<div class="choice-indicator">
+			{data.choices.length} paths
+		</div>
+	{/if}
 </div>
 
-<!-- Output handles for connections -->
-<Handle type="source" position={Position.Bottom} id="bottom" />
-<Handle type="source" position={Position.Right} id="right" />
-
 <style>
-  .chunk-node {
-    background: white;
-    border: 2px solid var(--chunk-color, #3b82f6);
-    border-radius: 12px;
-    padding: 12px;
-    min-width: 200px;
-    max-width: 250px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-    cursor: pointer;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  }
+	.chunk-node {
+		background: #09090b;
+		border: 2px solid var(--border-color);
+		border-radius: 12px;
+		padding: 0;
+		min-width: 220px;
+		max-width: 300px;
+		color: #fafaf9;
+		font-family: 'Inter', system-ui, sans-serif;
+		box-shadow: 0 4px 12px var(--shadow-color);
+		transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+		cursor: grab;
+		position: relative;
+		overflow: hidden;
+	}
 
-  .chunk-node:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-    transform: translateY(-1px);
-  }
+	.chunk-node:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 8px 20px var(--shadow-color);
+	}
 
-  .chunk-node.selected {
-    border-color: #1d4ed8;
-    box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.2);
-  }
+	.chunk-node.selected {
+		border-width: 3px;
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2), 0 8px 20px var(--shadow-color);
+	}
 
-  .chunk-node.dragging {
-    opacity: 0.8;
-    transform: rotate(2deg);
-  }
+	.chunk-node.dragging {
+		cursor: grabbing;
+		transform: rotate(2deg);
+		box-shadow: 0 12px 24px var(--shadow-color);
+	}
 
-  .chunk-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-  }
+	/* Input/Output Indicators */
+	.io-indicator {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 9px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		z-index: 10;
+	}
 
-  .chunk-type {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    color: var(--chunk-color);
-    font-weight: 600;
-  }
+	.io-input {
+		left: -40px;
+		flex-direction: row-reverse;
+	}
 
-  .chunk-icon {
-    font-size: 14px;
-  }
+	.io-output {
+		right: -40px;
+	}
 
-  .chunk-type-label {
-    text-transform: capitalize;
-  }
+	.io-label {
+		color: #a1a1aa;
+		background: #1c1917;
+		padding: 2px 4px;
+		border-radius: 3px;
+		border: 1px solid #292524;
+	}
 
-  .chunk-stats {
-    display: flex;
-    gap: 8px;
-    font-size: 11px;
-    color: #6b7280;
-  }
+	.io-connector {
+		width: 12px;
+		height: 12px;
+		border-radius: 50%;
+		border: 2px solid #292524;
+		position: relative;
+	}
 
-  .image-count,
-  .connection-count {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
+	.io-connector::before {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: currentColor;
+	}
 
-  .chunk-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 6px;
-    line-height: 1.3;
-  }
+	/* Connection Handles */
+	:global(.chunk-handle) {
+		width: 14px !important;
+		height: 14px !important;
+		border: 2px solid #292524 !important;
+		border-radius: 50% !important;
+		transition: all 0.2s !important;
+	}
 
-  .chunk-description {
-    font-size: 12px;
-    color: #6b7280;
-    margin-bottom: 10px;
-    line-height: 1.4;
-  }
+	:global(.chunk-handle-left) {
+		left: -9px !important;
+	}
 
-  .image-preview {
-    position: relative;
-    height: 60px;
-    margin-bottom: 8px;
-    display: flex;
-    gap: 4px;
-    overflow: hidden;
-  }
+	:global(.chunk-handle-right) {
+		right: -9px !important;
+	}
 
-  .preview-image {
-    position: relative;
-    width: 50px;
-    height: 50px;
-    border-radius: 6px;
-    overflow: hidden;
-    border: 1px solid #e5e7eb;
-  }
+	:global(.chunk-handle:hover) {
+		transform: scale(1.2) !important;
+		border-color: #ffffff !important;
+		box-shadow: 0 0 8px var(--connection-color) !important;
+	}
 
-  .preview-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+	/* Chunk Header */
+	.chunk-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 12px 16px 8px;
+		border-bottom: 1px solid #292524;
+		background: rgba(41, 37, 36, 0.3);
+	}
 
-  .more-images {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 50px;
-    height: 50px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    font-size: 11px;
-    color: #6b7280;
-    font-weight: 500;
-  }
+	.chunk-type {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
 
-  .no-images {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 60px;
-    background: #f9fafb;
-    border: 1px dashed #d1d5db;
-    border-radius: 6px;
-    margin-bottom: 8px;
-    gap: 4px;
-  }
+	.type-icon {
+		font-size: 16px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+	}
 
-  .no-images span {
-    font-size: 12px;
-    color: #9ca3af;
-  }
+	.type-label {
+		font-size: 11px;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: #a1a1aa;
+	}
 
-  .add-image-btn {
-    background: var(--chunk-color);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 2px 8px;
-    font-size: 10px;
-    cursor: pointer;
-    transition: opacity 0.2s;
-  }
+	.selection-indicator {
+		background: #22c55e;
+		color: white;
+		font-size: 10px;
+		font-weight: bold;
+		padding: 2px 6px;
+		border-radius: 50%;
+		min-width: 16px;
+		text-align: center;
+	}
 
-  .add-image-btn:hover {
-    opacity: 0.8;
-  }
+	/* Chunk Content */
+	.chunk-content {
+		padding: 16px;
+	}
 
-  .chunk-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 10px;
-    color: #9ca3af;
-    border-top: 1px solid #f3f4f6;
-    padding-top: 6px;
-  }
+	.chunk-title {
+		font-size: 14px;
+		font-weight: 600;
+		line-height: 1.3;
+		margin-bottom: 8px;
+		color: #fafaf9;
+	}
 
-  .chunk-id {
-    font-family: monospace;
-  }
+	.chunk-description {
+		font-size: 12px;
+		line-height: 1.4;
+		color: #e4e4e7;
+		margin-bottom: 12px;
+	}
 
-  /* Handle styles */
-  :global(.svelte-flow__handle) {
-    width: 8px;
-    height: 8px;
-    background: var(--chunk-color, #3b82f6);
-    border: 2px solid white;
-  }
+	.chunk-image-placeholder {
+		background: #292524;
+		border-radius: 6px;
+		padding: 16px;
+		text-align: center;
+		margin-bottom: 12px;
+		border: 1px dashed #3f3f46;
+		transition: all 0.2s;
+	}
 
-  :global(.svelte-flow__handle:hover) {
-    width: 10px;
-    height: 10px;
-  }
+	.chunk-image-placeholder:hover {
+		background: #3f3f46;
+		border-color: var(--border-color);
+	}
+
+	.image-icon {
+		font-size: 24px;
+		margin-bottom: 4px;
+	}
+
+	.image-text {
+		font-size: 10px;
+		color: #a1a1aa;
+		font-weight: 500;
+	}
+
+	.chunk-metadata {
+		display: grid;
+		gap: 4px;
+		margin-top: 8px;
+	}
+
+	.metadata-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 11px;
+	}
+
+	.metadata-key {
+		color: #a1a1aa;
+		font-weight: 500;
+	}
+
+	.metadata-value {
+		color: #e4e4e7;
+		background: #292524;
+		padding: 2px 6px;
+		border-radius: 3px;
+		font-weight: 600;
+	}
+
+	/* Chunk Footer */
+	.chunk-footer {
+		padding: 8px 16px 12px;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		border-top: 1px solid #292524;
+		background: rgba(41, 37, 36, 0.2);
+	}
+
+	.chunk-tag {
+		background: var(--border-color);
+		color: #ffffff;
+		font-size: 9px;
+		font-weight: 600;
+		padding: 2px 6px;
+		border-radius: 8px;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
+	/* Choice Indicator */
+	.choice-indicator {
+		position: absolute;
+		top: -8px;
+		right: 12px;
+		background: #f59e0b;
+		color: #000000;
+		font-size: 9px;
+		font-weight: bold;
+		padding: 2px 6px;
+		border-radius: 8px;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+	}
+
+	/* Responsive adjustments */
+	@media (max-width: 768px) {
+		.chunk-node {
+			min-width: 180px;
+			max-width: 250px;
+		}
+		
+		.chunk-content {
+			padding: 12px;
+		}
+		
+		.chunk-title {
+			font-size: 13px;
+		}
+		
+		.chunk-description {
+			font-size: 11px;
+		}
+	}
 </style>

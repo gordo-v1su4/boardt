@@ -1,303 +1,586 @@
+<!-- +page.svelte - Main Boardt Canvas Demo -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { uiStore } from '../lib/stores/ui.svelte.js';
-	import { storyChunksStore } from '../lib/stores/storyChunks.svelte.js';
-	import { presentationModeStore } from '../lib/stores/presentationMode.svelte.js';
+	import {
+		SvelteFlow,
+		SvelteFlowProvider,
+		Controls,
+		Background,
+		MiniMap,
+		useSvelteFlow,
+		MarkerType
+	} from '@xyflow/svelte';
+	import ChunkNode from '$lib/components/Canvas/ChunkNode.svelte';
+	import ChunkEdge from '$lib/components/Canvas/ChunkEdge.svelte';
+	import ChunkCreator from '$lib/components/Canvas/ChunkCreator.svelte';
+	
+	// Svelte 5 Runes for state management
+	let nodes = $state([
+		{
+			id: '1',
+			type: 'chunk',
+			position: { x: 100, y: 100 },
+			data: {
+				type: 'sequence',
+				title: 'Opening Scene',
+				description: 'Our hero enters the mysterious forest, unaware of the dangers ahead.',
+				hasImage: true
+			},
+			selected: false
+		},
+		{
+			id: '2',
+			type: 'chunk',
+			position: { x: 400, y: 100 },
+			data: {
+				type: 'choice',
+				title: 'The Fork in the Road',
+				description: 'Two paths diverge - one leads to the village, the other deeper into darkness.',
+				hasImage: true
+			},
+			selected: false
+		},
+		{
+			id: '3',
+			type: 'chunk',
+			position: { x: 650, y: 50 },
+			data: {
+				type: 'sequence',
+				title: 'Village Path',
+				description: 'The safe route leads to a peaceful village with friendly inhabitants.',
+				hasImage: false
+			},
+			selected: false
+		},
+		{
+			id: '4',
+			type: 'chunk',
+			position: { x: 650, y: 200 },
+			data: {
+				type: 'keyframe',
+				title: 'Dark Forest',
+				description: 'The dangerous path reveals ancient secrets and hidden treasures.',
+				hasImage: true
+			},
+			selected: false
+		}
+	]);
 
-	// Components
-	import CanvasView from '../lib/components/Canvas/CanvasView.svelte';
-	import ChunkCreator from '../lib/components/Canvas/ChunkCreator.svelte';
-	import KeyframeInserter from '../lib/components/Canvas/KeyframeInserter.svelte';
-	import PresentationView from '../lib/components/SetView/PresentationView.svelte';
-	import ConnectionValidator from '../lib/components/StoryFlow/ConnectionValidator.svelte';
+		let edges = $state([
+		{
+			id: 'e1-2',
+			source: '1',
+			target: '2',
+			type: 'chunk',
+			data: { type: 'sequence' },
+			markerEnd: { type: MarkerType.ArrowClosed, color: '#22c55e' },
+			selected: false
+		},
+		{
+			id: 'e2-3',
+			source: '2',
+			target: '3',
+			type: 'chunk',
+			data: { type: 'choice' },
+			markerEnd: { type: MarkerType.ArrowClosed, color: '#f59e0b' },
+			selected: false
+		},
+		{
+			id: 'e2-4',
+			source: '2',
+			target: '4',
+			type: 'chunk',
+			data: { type: 'branch' },
+			markerEnd: { type: MarkerType.ArrowClosed, color: '#06b6d4' },
+			selected: false
+		}
+	]);
 
-	// Reactive state
-	$: currentView = uiStore.currentView;
-	$: isPresenting = presentationModeStore.isPresenting;
+	let showCreateModal = $state(false);
+	let selectedNodes = $state([]);
+	let selectedEdges = $state([]);
 
-	// Tab navigation
-	const tabs = [
-		{ id: 'canvas', label: 'Canvas', icon: '🎨' },
-		{ id: 'presentation', label: 'Presentation', icon: '📽️' }
-	];
+	// Derived state for canvas stats
+	let canvasStats = $derived({
+		nodeCount: nodes.length,
+		edgeCount: edges.length,
+		sequenceNodes: nodes.filter(n => n.data?.type === 'sequence').length,
+		choiceNodes: nodes.filter(n => n.data?.type === 'choice').length,
+		keyframeNodes: nodes.filter(n => n.data?.type === 'keyframe').length
+	});
 
-	/**
-	 * Switch between views
-	 */
-	function switchView(viewId: string) {
-		uiStore.switchView(viewId);
+	// Node types for SvelteFlow
+	const nodeTypes = {
+		chunk: ChunkNode
+	};
+
+		// Edge types for SvelteFlow
+	const edgeTypes = {
+		chunk: ChunkEdge
+	} as any;
+
+
+
+	// Event handlers (simplified for now)
+	function onConnect(connection) {
+		// Create new connection
+		const newEdge = {
+			id: `e${connection.source}-${connection.target}`,
+			source: connection.source,
+			target: connection.target,
+			type: 'chunk',
+			data: { type: 'sequence' },
+			markerEnd: { type: MarkerType.ArrowClosed, color: '#22c55e' },
+			selected: false
+		};
+		edges = [...edges, newEdge];
 	}
 
-	/**
-	 * Handle keyboard shortcuts
-	 */
-	function handleKeydown(event: KeyboardEvent) {
-		// Global shortcuts
+	// Canvas actions
+	function createSampleData() {
+				nodes = [
+			{
+				id: '1',
+				type: 'chunk',
+				position: { x: 100, y: 100 },
+				data: {
+					type: 'sequence',
+					title: 'Opening Scene',
+					description: 'Our hero enters the mysterious forest, unaware of the dangers ahead.',
+					hasImage: true
+				},
+				selected: false
+			},
+			{
+				id: '2',
+				type: 'chunk',
+				position: { x: 400, y: 100 },
+				data: {
+					type: 'choice',
+					title: 'The Fork in the Road',
+					description: 'Two paths diverge - one leads to the village, the other deeper into darkness.',
+					hasImage: true
+				},
+				selected: false
+			},
+			{
+				id: '3',
+				type: 'chunk',
+				position: { x: 650, y: 50 },
+				data: {
+					type: 'sequence',
+					title: 'Village Path',
+					description: 'The safe route leads to a peaceful village with friendly inhabitants.',
+					hasImage: false
+				},
+				selected: false
+			},
+			{
+				id: '4',
+				type: 'chunk',
+				position: { x: 650, y: 200 },
+				data: {
+					type: 'keyframe',
+					title: 'Dark Forest',
+					description: 'The dangerous path reveals ancient secrets and hidden treasures.',
+					hasImage: true
+				},
+				selected: false
+			}
+		];
+
+		edges = [
+			{
+				id: 'e1-2',
+				source: '1',
+				target: '2',
+				type: 'chunk',
+				data: { type: 'sequence' },
+				markerEnd: { type: MarkerType.ArrowClosed, color: '#22c55e' },
+				selected: false
+			},
+			{
+				id: 'e2-3',
+				source: '2',
+				target: '3',
+				type: 'chunk',
+				data: { type: 'choice' },
+				markerEnd: { type: MarkerType.ArrowClosed, color: '#f59e0b' },
+				selected: false
+			},
+			{
+				id: 'e2-4',
+				source: '2',
+				target: '4',
+				type: 'chunk',
+				data: { type: 'branch' },
+				markerEnd: { type: MarkerType.ArrowClosed, color: '#06b6d4' },
+				selected: false
+			}
+		];
+	}
+
+	function clearCanvas() {
+		nodes = [];
+		edges = [];
+	}
+
+	function deleteSelected() {
+		const selectedNodeIds = nodes.filter(n => n.selected).map(n => n.id);
+		const selectedEdgeIds = edges.filter(e => e.selected).map(e => e.id);
+		
+		// Remove selected nodes and their connected edges
+		nodes = nodes.filter(n => !n.selected);
+		edges = edges.filter(e => 
+			!e.selected && 
+			!selectedNodeIds.includes(e.source) && 
+			!selectedNodeIds.includes(e.target)
+		);
+	}
+
+	function selectAll() {
+		nodes = nodes.map(n => ({ ...n, selected: true }));
+		edges = edges.map(e => ({ ...e, selected: true }));
+	}
+
+	function resetZoom() {
+		// Zoom and fit functionality will be handled by SvelteFlow's built-in controls
+		console.log('Reset zoom requested');
+	}
+
+	// Keyboard shortcuts
+	function handleKeydown(event) {
+		// Delete selected elements
+		if (event.key === 'Delete' || event.key === 'Backspace') {
+			event.preventDefault();
+			deleteSelected();
+		}
+		
+		// Keyboard shortcuts with Ctrl/Cmd
 		if (event.ctrlKey || event.metaKey) {
-			switch (event.key) {
-				case '1':
+			switch(event.key) {
+				case '0':
 					event.preventDefault();
-					switchView('canvas');
+					resetZoom();
 					break;
-				case '2':
+				case 'a':
 					event.preventDefault();
-					switchView('presentation');
+					selectAll();
+					break;
+				case '+':
+				case '=':
+					event.preventDefault();
+					console.log('Zoom in requested');
+					break;
+				case '-':
+					event.preventDefault();
+					console.log('Zoom out requested');
 					break;
 			}
 		}
 	}
 
-	/**
-	 * Initialize application
-	 */
+	// Handle chunk creation
+	function handleCreateChunk(chunkData) {
+		const newNode = {
+			id: `chunk-${Date.now()}`,
+			type: 'chunk',
+			position: {
+				x: Math.random() * 400 + 200,
+				y: Math.random() * 300 + 150
+			},
+			data: chunkData,
+			selected: false
+		};
+		nodes = [...nodes, newNode];
+		showCreateModal = false;
+	}
+
 	onMount(() => {
-		// Load any saved data from localStorage
-		try {
-			const savedData = localStorage.getItem('storyboard-generator-data');
-			if (savedData) {
-				const data = JSON.parse(savedData);
-				storyChunksStore.loadFromData(data);
-			}
-		} catch (error) {
-			console.warn('Failed to load saved data:', error);
-		}
-
-		// Auto-save data periodically
-		const saveInterval = setInterval(() => {
-			try {
-				const data = storyChunksStore.exportData();
-				localStorage.setItem('storyboard-generator-data', JSON.stringify(data));
-			} catch (error) {
-				console.warn('Failed to save data:', error);
-			}
-		}, 30000); // Save every 30 seconds
-
-		// Cleanup on unmount
+		// Setup keyboard listeners
+		window.addEventListener('keydown', handleKeydown);
+		
 		return () => {
-			clearInterval(saveInterval);
+			window.removeEventListener('keydown', handleKeydown);
 		};
 	});
 </script>
 
-<svelte:window on:keydown={handleKeydown} />
-
 <svelte:head>
-	<title>Storyboard Generator</title>
-	<meta name="description" content="AI-powered storyboard generator for video content creators" />
+	<title>Boardt - AI Storyboard Generator</title>
+	<style>
+		/* Global SvelteFlow CSS imports */
+		@import '@xyflow/svelte/dist/style.css';
+	</style>
 </svelte:head>
 
-<div class="app" class:presenting={isPresenting}>
-	{#if !isPresenting}
-		<!-- Tab Navigation -->
-		<nav class="tab-navigation">
-			<div class="nav-content">
-				<div class="app-title">
-					<h1>📽️ Storyboard Generator</h1>
+<main class="canvas-container">
+	<SvelteFlowProvider>
+		<SvelteFlow
+			{nodes}
+			{edges}
+			{nodeTypes}
+			{edgeTypes}
+			onconnect={onConnect}
+			fitView={true}
+			snapGrid={[20, 20]}
+			minZoom={0.1}
+			maxZoom={2}
+			class="dark-flow"
+
+
+		>
+			<Background gap={20} />
+			<Controls />
+			<MiniMap nodeColor="#22c55e" maskColor="rgba(9, 9, 11, 0.8)" pannable zoomable />
+
+			<!-- Debug Panel -->
+			<div class="debug-panel">
+				<button class="btn btn-success" onclick={createSampleData}>
+					Create Sample Data
+				</button>
+				<button class="btn btn-primary" onclick={() => showCreateModal = true}>
+					Create Chunk
+				</button>
+				<button class="btn btn-danger" onclick={clearCanvas}>
+					Clear Canvas
+				</button>
+				<button class="btn btn-secondary" onclick={resetZoom}>
+					Reset View
+				</button>
+			</div>
+
+			<!-- Stats Panel -->
+			<div class="stats-panel">
+				<h3>Canvas Statistics</h3>
+				<div class="stats-grid">
+					<div class="stat-item">
+						<span class="stat-label">Total Chunks:</span>
+						<span class="stat-value">{canvasStats.nodeCount}</span>
+					</div>
+					<div class="stat-item">
+						<span class="stat-label">Connections:</span>
+						<span class="stat-value">{canvasStats.edgeCount}</span>
+					</div>
+					<div class="stat-item sequence">
+						<span class="stat-label">📺 Sequences:</span>
+						<span class="stat-value">{canvasStats.sequenceNodes}</span>
+					</div>
+					<div class="stat-item choice">
+						<span class="stat-label">🔀 Choices:</span>
+						<span class="stat-value">{canvasStats.choiceNodes}</span>
+					</div>
+					<div class="stat-item keyframe">
+						<span class="stat-label">🎯 Keyframes:</span>
+						<span class="stat-value">{canvasStats.keyframeNodes}</span>
+					</div>
 				</div>
 
-				<div class="tab-buttons">
-					{#each tabs as tab}
-						<button
-							class="tab-btn"
-							class:active={currentView === tab.id}
-							onclick={() => switchView(tab.id)}
-							title="{tab.label} (Ctrl+{tabs.indexOf(tab) + 1})"
-						>
-							<span class="tab-icon">{tab.icon}</span>
-							<span class="tab-label">{tab.label}</span>
-						</button>
-					{/each}
-				</div>
-
-				<div class="nav-actions">
-					<button
-						class="action-btn"
-						onclick={() => uiStore.openSettingsDialog()}
-						title="Settings"
-					>
-						⚙️
-					</button>
+				<div class="help-text">
+					<strong>Controls:</strong><br/>
+					• Drag chunks to move<br/>
+					• Connect handles to link<br/>
+					• Delete/Backspace: Remove<br/>
+					• Ctrl+A: Select all<br/>
+					• Ctrl+0: Reset zoom<br/>
+					• Mouse wheel: Zoom
 				</div>
 			</div>
-		</nav>
+		</SvelteFlow>
+	</SvelteFlowProvider>
+
+	<!-- Chunk Creator Modal -->
+	{#if showCreateModal}
+		<ChunkCreator
+			onClose={() => showCreateModal = false}
+			onCreate={handleCreateChunk}
+		/>
 	{/if}
-
-	<!-- Main Content -->
-	<main class="main-content">
-		{#if currentView === 'canvas'}
-			<CanvasView />
-		{:else if currentView === 'presentation'}
-			<PresentationView />
-		{/if}
-	</main>
-
-	<!-- Modals and Overlays -->
-	<ChunkCreator />
-	<KeyframeInserter />
-	<ConnectionValidator />
-</div>
+</main>
 
 <style>
-	.app {
-		width: 100vw;
-		height: 100vh;
-		display: flex;
-		flex-direction: column;
-		background: #18181b; /* zinc-900 */
-		color: #fafafa; /* zinc-50 */
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-		overflow: hidden;
-	}
-
-	.app.presenting {
-		background: #000;
-	}
-
-	.tab-navigation {
-		background: #27272a; /* zinc-800 */
-		border-bottom: 1px solid #3f3f46; /* zinc-700 */
-		padding: 0 24px;
-		flex-shrink: 0;
-	}
-
-	.nav-content {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		height: 64px;
-		max-width: 1400px;
-		margin: 0 auto;
-	}
-
-	.app-title h1 {
-		margin: 0;
-		font-size: 1.25rem;
-		font-weight: 600;
-		color: #fafafa; /* zinc-50 */
-	}
-
-	.tab-buttons {
-		display: flex;
-		gap: 4px;
-		background: #3f3f46; /* zinc-700 */
-		border-radius: 8px;
-		padding: 4px;
-	}
-
-	.tab-btn {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		background: none;
-		border: none;
-		border-radius: 6px;
-		padding: 8px 16px;
-		font-size: 14px;
-		font-weight: 500;
-		color: #a1a1aa; /* zinc-400 */
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.tab-btn:hover {
-		background: #52525b; /* zinc-600 */
-		color: #e4e4e7; /* zinc-200 */
-	}
-
-	.tab-btn.active {
-		background: #18181b; /* zinc-900 */
-		color: #fafafa; /* zinc-50 */
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-	}
-
-	.tab-icon {
-		font-size: 16px;
-	}
-
-	.tab-label {
-		font-weight: 500;
-	}
-
-	.nav-actions {
-		display: flex;
-		gap: 8px;
-	}
-
-	.action-btn {
-		background: #3f3f46; /* zinc-700 */
-		border: 1px solid #52525b; /* zinc-600 */
-		border-radius: 6px;
-		padding: 8px;
-		font-size: 16px;
-		color: #e4e4e7; /* zinc-200 */
-		cursor: pointer;
-		transition: all 0.2s ease;
-	}
-
-	.action-btn:hover {
-		background: #52525b; /* zinc-600 */
-	}
-
-	.main-content {
-		flex: 1;
-		overflow: hidden;
-		position: relative;
-	}
-
-	/* Responsive design */
-	@media (max-width: 768px) {
-		.nav-content {
-			padding: 0 16px;
-		}
-
-		.app-title h1 {
-			font-size: 1.1rem;
-		}
-
-		.tab-btn {
-			padding: 6px 12px;
-			font-size: 13px;
-		}
-
-		.tab-label {
-			display: none;
-		}
-	}
-
-	@media (max-width: 480px) {
-		.tab-navigation {
-			padding: 0 12px;
-		}
-
-		.nav-content {
-			height: 56px;
-		}
-
-		.app-title h1 {
-			font-size: 1rem;
-		}
-
-		.tab-btn {
-			padding: 6px 8px;
-		}
-	}
-
-	/* Global styles */
 	:global(body) {
 		margin: 0;
 		padding: 0;
+		background: #0f0f0f;
+		font-family: 'Inter', system-ui, sans-serif;
 		overflow: hidden;
 	}
 
-	:global(*) {
-		box-sizing: border-box;
+	.canvas-container {
+		width: 100vw;
+		height: 100vh;
+		background: #09090b !important;
 	}
 
-	:global(button) {
-		font-family: inherit;
+	/* SvelteFlow Dark Theme - Zinc/Stone Palette */
+	:global(.svelte-flow) {
+		background: #09090b !important;
 	}
 
-	:global(input, textarea, select) {
-		font-family: inherit;
+	:global(.dark-flow) {
+		background: #09090b !important;
+	}
+
+	:global(.svelte-flow__viewport) {
+		background: #09090b !important;
+	}
+
+	:global(.svelte-flow__pane) {
+		background: #09090b !important;
+	}
+
+	:global(.svelte-flow__node) {
+		background: transparent !important;
+	}
+
+	:global(.svelte-flow__edge-path) {
+		stroke: #22c55e !important;
+	}
+
+	:global(.svelte-flow__edge.selected .svelte-flow__edge-path) {
+		stroke: #f59e0b !important;
+	}
+
+		:global(.dark-flow .svelte-flow__controls) {
+			background: #1c1917;
+			border: 1px solid #292524;
+			border-radius: 8px;
+		}
+
+		:global(.dark-flow .svelte-flow__controls button) {
+			background: #292524;
+			border: 1px solid #3f3f46;
+			color: #e4e4e7;
+		}
+
+		:global(.dark-flow .svelte-flow__controls button:hover) {
+			background: #3f3f46;
+		}
+
+		:global(.dark-flow .svelte-flow__minimap) {
+			background: #1c1917;
+			border: 1px solid #292524;
+			border-radius: 8px;
+		}
+
+	/* Debug Panel */
+	.debug-panel {
+		position: absolute;
+		top: 20px;
+		left: 20px;
+		z-index: 10;
+		display: flex;
+		gap: 8px;
+		flex-wrap: wrap;
+		background: #1c1917;
+		padding: 12px;
+		border-radius: 8px;
+		border: 1px solid #292524;
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+	}
+
+	/* Stats Panel */
+	.stats-panel {
+		position: absolute;
+		top: 20px;
+		right: 20px;
+		z-index: 10;
+		background: #1c1917;
+		padding: 16px;
+		border-radius: 8px;
+		border: 1px solid #292524;
+		box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+		color: #e4e4e7;
+		min-width: 200px;
+		font-size: 12px;
+	}
+
+	.stats-panel h3 {
+		margin: 0 0 12px 0;
+		color: #fafaf9;
+		font-size: 14px;
+	}
+
+	.stats-grid {
+		display: grid;
+		gap: 6px;
+		margin-bottom: 12px;
+	}
+
+	.stat-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 4px 0;
+	}
+
+	.stat-item.sequence { color: #22c55e; }  /* Zinc green */
+	.stat-item.choice { color: #f59e0b; }     /* Zinc amber */
+	.stat-item.keyframe { color: #06b6d4; }   /* Zinc cyan */
+
+	.stat-label {
+		font-weight: 500;
+	}
+
+	.stat-value {
+		background: #292524;
+		padding: 2px 6px;
+		border-radius: 4px;
+		font-weight: bold;
+	}
+
+	.help-text {
+		padding-top: 12px;
+		border-top: 1px solid #292524;
+		line-height: 1.4;
+		color: #a1a1aa;
+	}
+
+	/* Button Styles - Zinc/Stone Palette */
+	.btn {
+		padding: 6px 12px;
+		border: none;
+		border-radius: 4px;
+		font-size: 12px;
+		font-weight: 500;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.btn-primary {
+		background: #22c55e;  /* Zinc green */
+		color: white;
+	}
+
+	.btn-primary:hover {
+		background: #16a34a;
+	}
+
+	.btn-success {
+		background: #06b6d4;  /* Zinc cyan */
+		color: white;
+	}
+
+	.btn-success:hover {
+		background: #0891b2;
+	}
+
+	.btn-danger {
+		background: #ef4444;  /* Zinc red */
+		color: white;
+	}
+
+	.btn-danger:hover {
+		background: #dc2626;
+	}
+
+	.btn-secondary {
+		background: #3f3f46;  /* Zinc 700 */
+		color: white;
+	}
+
+	.btn-secondary:hover {
+		background: #52525b;
 	}
 </style>
