@@ -14,8 +14,13 @@
 	import ChunkEdge from '$lib/components/Canvas/ChunkEdge.svelte';
 	import ChunkCreator from '$lib/components/Canvas/ChunkCreator.svelte';
 	import KeyframeInserter from '$lib/components/Canvas/KeyframeInserter.svelte';
+	import LinearIntegrationPanel from '$lib/components/Canvas/LinearIntegrationPanel.svelte';
 	import { uiStore } from '$lib/stores/ui.svelte.js';
 	import { storyChunksStore } from '$lib/stores/storyChunks.svelte.js';
+	import { linearConfig } from '$lib/stores/linearConfig.svelte.js';
+	
+	// State for UI controls
+	let showLinearPanel = $state(false);
 	
 	// Svelte 5 Runes for state management
 	let nodes = $state([
@@ -371,6 +376,13 @@
 				<button class="btn btn-secondary" onclick={resetZoom}>
 					Reset View
 				</button>
+				<button
+					class="btn btn-info"
+					onclick={() => showLinearPanel = !showLinearPanel}
+					class:active={showLinearPanel}
+				>
+					{showLinearPanel ? 'Hide Linear' : 'Linear Sync'}
+				</button>
 			</div>
 
 			<!-- Stats Panel -->
@@ -422,6 +434,14 @@
 
 	<!-- Keyframe Inserter Modal -->
 	<KeyframeInserter />
+	
+	<!-- Linear Integration Panel -->
+	{#if showLinearPanel}
+		<LinearIntegrationPanel
+			selectedNodes={nodes.filter(node => node.selected)}
+			onClose={() => showLinearPanel = false}
+		/>
+	{/if}
 </main>
 
 <style>
@@ -617,5 +637,19 @@
 
 	.btn-warning:hover {
 		background: #d97706;
+	}
+	
+	.btn-info {
+		background: #3b82f6;  /* Blue */
+		color: white;
+	}
+	
+	.btn-info:hover {
+		background: #2563eb;
+	}
+	
+	.btn-info.active {
+		background: #1d4ed8;
+		box-shadow: inset 0 0 0 2px white;
 	}
 </style>

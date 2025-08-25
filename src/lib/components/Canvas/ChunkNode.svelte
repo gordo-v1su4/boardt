@@ -1,14 +1,53 @@
 <!-- ChunkNode.svelte - src/lib/components/Canvas/ChunkNode.svelte -->
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
+	import { LinearService } from '$lib/mcp/linear/linearService';
 
 	// Props from SvelteFlow using Svelte 5 $props()
 	let { data, id, selected = false, dragging = false } = $props();
 
+	// State for Linear integration
+	let isLoadingLinear = $state(false);
+	let linearIssueDetails = $state<any>(null);
+	
 	// Reactive chunk styling based on type using Svelte 5 $derived()
 	let chunkStyle = $derived(getChunkStyle(data?.type));
 	let typeIcon = $derived(getTypeIcon(data?.type));
 	let connectionColor = $derived(getConnectionColor(data?.type));
+	
+	// Load Linear issue details if this node has a Linear issue ID
+	$effect(() => {
+		if (data?.linearIssueId) {
+			loadLinearIssueDetails();
+		}
+	});
+	
+	// Fetch Linear issue details
+	async function loadLinearIssueDetails() {
+		isLoadingLinear = true;
+		
+		try {
+			const issue = await LinearService.getIssue(data.linearIssueId);
+			linearIssueDetails = issue;
+		} catch (error) {
+			console.error('Failed to load Linear issue details:', error);
+		} finally {
+			isLoadingLinear = false;
+		}
+	}
+	
+	// Get status color for Linear issue
+	function getLinearStatusColor(status) {
+		const colors = {
+			'Todo': '#3b82f6',       // Blue
+			'In Progress': '#f59e0b', // Amber
+			'In Review': '#8b5cf6',   // Purple
+			'Done': '#22c55e',        // Green
+			'Canceled': '#ef4444'     // Red
+		};
+		
+		return colors[status] || '#a1a1aa';
+	}
 
 	function getChunkStyle(type) {
 		const baseStyle = {
@@ -177,6 +216,25 @@
 			{#each data.tags as tag}
 				<span class="chunk-tag">{tag}</span>
 			{/each}
+		</div>
+	{/if}
+	
+	<!-- Linear Integration -->
+	{#if data?.linearIssueId}
+		<div class="linear-integration">
+			<div class="linear-badge">
+				<span class="linear-icon">⚡</span>
+				<span class="linear-id">Linear: {data.linearIssueId.substring(0, 8)}...</span>
+			</div>
+			
+			{#if isLoadingLinear}
+				<div class="linear-loading">Loading...</div>
+			{:else if linearIssueDetails}
+				<div class="linear-status" style="--status-color: {getLinearStatusColor(linearIssueDetails.state.name)}">
+					<span class="status-dot"></span>
+					<span class="status-text">{linearIssueDetails.state.name}</span>
+				</div>
+			{/if}
 		</div>
 	{/if}
 
@@ -474,5 +532,55 @@
 		.chunk-description {
 			font-size: 11px;
 		}
+	}
+	
+	/* Linear Integration */
+	.linear-integration {
+		border-top: 1px solid #292524;
+		padding: 10px 16px;
+		background: rgba(41, 37, 36, 0.2);
+		font-size: 11px;
+	}
+	
+	.linear-badge {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		color: #a1a1aa;
+		margin-bottom: 4px;
+	}
+	
+	.linear-icon {
+		color: #3b82f6;
+	}
+	
+	.linear-id {
+		font-family: monospace;
+		font-size: 10px;
+	}
+	
+	.linear-status {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+	
+	.status-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background-color: var(--status-color, #a1a1aa);
+	}
+	
+	.status-text {
+		color: var(--status-color, #a1a1aa);
+		font-weight: 500;
+	}
+	
+	.linear-loading {
+		color: #a1a1aa;
+		font-style: italic;
+		font-size: 10px;
+		margin-top: 2px;
 	}
 </style>
