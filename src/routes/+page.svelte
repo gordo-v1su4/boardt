@@ -14,6 +14,8 @@
 	import ChunkEdge from '$lib/components/Canvas/ChunkEdge.svelte';
 	import ChunkCreator from '$lib/components/Canvas/ChunkCreator.svelte';
 	import KeyframeInserter from '$lib/components/Canvas/KeyframeInserter.svelte';
+	import { uiStore } from '$lib/stores/ui.svelte.js';
+	import { storyChunksStore } from '$lib/stores/storyChunks.svelte.js';
 	
 	// Svelte 5 Runes for state management
 	let nodes = $state([
@@ -97,7 +99,7 @@
 		}
 	]);
 
-	let showCreateModal = $state(false);
+	// Use uiStore for modal state instead of local state
 	let selectedNodes = $state([]);
 	let selectedEdges = $state([]);
 
@@ -285,18 +287,33 @@
 
 	// Handle chunk creation
 	function handleCreateChunk(chunkData) {
-		const newNode = {
-			id: `chunk-${Date.now()}`,
-			type: 'chunk',
+		// Create a new node using the storyChunksStore
+		const chunk = storyChunksStore.addChunk({
+			title: chunkData.title,
+			description: chunkData.description,
+			chunkType: chunkData.type,
 			position: {
 				x: Math.random() * 400 + 200,
 				y: Math.random() * 300 + 150
 			},
-			data: chunkData,
+			metadata: chunkData.metadata || {}
+		});
+		
+		// Update the nodes array to reflect the change
+		const newNode = {
+			id: chunk.id,
+			type: 'chunk',
+			position: chunk.position,
+			data: {
+				...chunkData,
+				id: chunk.id
+			},
 			selected: false
 		};
 		nodes = [...nodes, newNode];
-		showCreateModal = false;
+		
+		// Close the modal using the store
+		uiStore.closeChunkCreator();
 	}
 
 	onMount(() => {
@@ -342,7 +359,7 @@
 				<button class="btn btn-success" onclick={createSampleData}>
 					Create Sample Data
 				</button>
-				<button class="btn btn-primary" onclick={() => showCreateModal = true}>
+				<button class="btn btn-primary" onclick={() => uiStore.openChunkCreator()}>
 					Create Chunk
 				</button>
 				<button class="btn btn-warning" onclick={() => console.log('Current nodes:', nodes, 'Current edges:', edges)}>
@@ -396,9 +413,9 @@
 	</SvelteFlowProvider>
 
 	<!-- Chunk Creator Modal -->
-	{#if showCreateModal}
+	{#if uiStore.showChunkCreator}
 		<ChunkCreator
-			onClose={() => showCreateModal = false}
+			onClose={() => uiStore.closeChunkCreator()}
 			onCreate={handleCreateChunk}
 		/>
 	{/if}

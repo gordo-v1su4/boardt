@@ -1,12 +1,14 @@
 <!-- ChunkCreator.svelte - src/lib/components/Canvas/ChunkCreator.svelte -->
 <script lang="ts">
 	import { createEventDispatcher, onMount } from 'svelte';
+	import { storyChunksStore } from '../../stores/storyChunks.svelte.js';
+	import { uiStore } from '../../stores/ui.svelte.js';
 
 	// Event dispatcher for component communication
 	const dispatch = createEventDispatcher();
 
 	// Props using Svelte 5 $props()
-	let { onClose = () => {}, onCreate = () => {} } = $props();
+	let { onClose = () => uiStore.closeChunkCreator(), onCreate = () => {} } = $props();
 
 	// Form state using Svelte 5 Runes
 	let selectedType = $state('sequence');
@@ -140,6 +142,7 @@
 	function handleClose() {
 		onClose();
 		dispatch('close');
+		uiStore.closeChunkCreator();
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
