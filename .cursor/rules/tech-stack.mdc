@@ -1,0 +1,171 @@
+---
+description: Complete analysis of the BoardT application tech stack, versions, and best practices
+globs: package.json
+alwaysApply: true
+---
+
+# BoardT Tech Stack Analysis
+
+This rule documents the complete technology stack for the BoardT storyboard and canvas application, including version analysis and best practice recommendations.
+
+## Core Application Stack
+
+### Framework & Runtime
+- **Node.js**: `>=20.0.0`
+  - **Current Version**: Latest LTS recommended
+  - **Best Practice**: Node 20+ provides excellent performance and modern JavaScript features
+  - **Remark**: Good choice for modern web development with full ES2022+ support
+
+### Frontend Framework
+- **Svelte**: `^5.1.9`
+  - **Status**: Latest stable major version
+  - **Best Practice**: Svelte 5 offers significant performance improvements and new features
+  - **Remark**: Excellent choice for reactive UI development with minimal boilerplate
+
+- **SvelteKit**: `^2.8.0`
+  - **Status**: Recent stable version
+  - **Best Practice**: Provides excellent SSR, routing, and deployment options
+  - **Remark**: Mature framework with great developer experience
+
+### Build Tools & Development
+- **Vite**: `^5.4.10`
+  - **Status**: Latest stable version
+  - **Best Practice**: Extremely fast build tool with excellent HMR
+  - **Remark**: Perfect choice for modern frontend development
+
+- **TypeScript**: `^5.6.3`
+  - **Status**: Latest stable version
+  - **Best Practice**: Full type safety with excellent Svelte integration
+  - **Remark**: Essential for large applications like BoardT
+
+## Testing Infrastructure
+
+### Test Framework
+- **Vitest**: `^3.2.4`
+  - **Status**: Recent stable version
+  - **Best Practice**: Fast, native ES modules support, great for Svelte projects
+  - **Remark**: Excellent choice over Jest for modern JavaScript projects
+
+- **@vitest/ui**: `^3.2.4`
+  - **Status**: Matching Vitest version
+  - **Best Practice**: Provides great visual test interface
+  - **Remark**: Optional but valuable for development workflow
+
+### Test Environment
+- **jsdom**: `^26.1.0`
+  - **Status**: Latest stable version
+  - **Best Practice**: Excellent DOM simulation for component testing
+  - **Remark**: Perfect for testing Svelte components
+
+## Development Tools
+
+### Svelte-Specific
+- **@sveltejs/vite-plugin-svelte**: `^4.0.0`
+  - **Status**: Stable version
+  - **Best Practice**: Official Svelte plugin for Vite
+  - **Remark**: Essential for SvelteKit projects
+
+- **svelte-check**: `^4.0.8`
+  - **Status**: Recent stable version
+  - **Best Practice**: Type checking for Svelte components
+  - **Remark**: Critical for TypeScript + Svelte development
+
+## Deployment & Hosting
+
+### Platform
+- **Vercel**: `@sveltejs/adapter-vercel ^4.0.5`
+  - **Status**: Recent stable version
+  - **Best Practice**: Excellent for SvelteKit with edge runtime support
+  - **Remark**: Great choice for global deployment with good performance
+
+## Production Dependencies
+
+### Canvas & Flow Functionality
+- **@xyflow/svelte**: `^1.2.2`
+  - **Status**: Recent stable version
+  - **Best Practice**: Svelte version of React Flow for canvas functionality
+  - **Remark**: Essential for BoardT's canvas-based storyboard creation
+
+### AI & Image Generation
+- **@fal-ai/client**: `^1.0.0`
+  - **Status**: Latest stable version
+  - **Best Practice**: Modern AI client for image generation
+  - **Remark**: Perfect for BoardT's image generation features
+
+### Build Dependencies
+- **@rollup/rollup-win32-x64-msvc**: `^4.46.2`
+  - **Status**: Platform-specific Rollup build
+  - **Best Practice**: Windows-specific Rollup for optimal performance
+  - **Remark**: Automatically selected based on development platform
+
+## Version Strategy Analysis
+
+### Semantic Versioning Usage
+- **All dependencies use `^` (caret)**: Allows patch and minor updates
+- **Best Practice**: Good for staying current with security updates and bug fixes
+- **Remark**: Consider pinning major versions for production stability
+
+### Version Freshness
+- **Svelte 5.1.9**: Latest major version ✅
+- **SvelteKit 2.8.0**: Recent and stable ✅
+- **Vite 5.4.10**: Latest stable ✅
+- **TypeScript 5.6.3**: Latest stable ✅
+- **Node.js 20+**: Modern LTS ✅
+
+## Architecture Benefits
+
+### Performance
+- **Svelte 5**: Superior runtime performance with fine-grained reactivity
+- **Vite**: Lightning-fast development builds and optimized production bundles
+- **SvelteKit**: Automatic code splitting and optimized loading
+
+### Developer Experience
+- **TypeScript**: Full type safety across the entire application
+- **Vitest**: Fast, modern testing with excellent IDE integration
+- **SvelteKit**: File-based routing and automatic API endpoints
+
+### Scalability
+- **Component Architecture**: Well-organized Canvas, SetView, StoryFlow, UI components
+- **State Management**: Svelte stores for reactive state management
+- **MCP Integration**: Extensible tool integration framework
+
+## Best Practice Recommendations
+
+### Version Management
+1. **Keep dependencies updated** regularly for security patches
+2. **Test thoroughly** after major version updates
+3. **Consider pinning** critical production dependencies
+4. **Monitor** for deprecation warnings in newer versions
+
+### Development Workflow
+1. **Use TypeScript** for all new code (already implemented)
+2. **Write tests** for all components and business logic
+3. **Follow** the established component organization patterns
+4. **Document** new features in the appropriate docs/ folder
+
+### Deployment Strategy
+1. **Use Vercel** for excellent performance and global reach
+2. **Implement** proper error handling and monitoring
+3. **Consider** edge runtime for improved performance
+4. **Set up** preview deployments for testing
+
+## Dependency Categories Summary
+
+```
+🎯 Core Framework: Svelte 5 + SvelteKit
+⚡ Build Tools: Vite + TypeScript
+🧪 Testing: Vitest + jsdom
+🚀 Deployment: Vercel adapter
+🎨 Canvas: XYFlow for Svelte
+🤖 AI: FAL.ai client
+```
+
+## Technology Stack Score
+
+- **Modernity**: ⭐⭐⭐⭐⭐ (Latest versions, cutting-edge tech)
+- **Performance**: ⭐⭐⭐⭐⭐ (Svelte 5, Vite, optimized builds)
+- **Developer Experience**: ⭐⭐⭐⭐⭐ (TypeScript, SvelteKit, Vitest)
+- **Scalability**: ⭐⭐⭐⭐⭐ (Component architecture, state management)
+- **Ecosystem**: ⭐⭐⭐⭐⭐ (Active communities, good tooling)
+
+**Overall Assessment**: Excellent modern tech stack perfectly suited for a complex canvas-based application like BoardT.

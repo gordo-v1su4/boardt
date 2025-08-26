@@ -1,0 +1,304 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+# BoardT Project Structure Guide
+
+This rule documents the directory structure and key files/folders in the BoardT project, a SvelteKit-based storyboard and canvas application with Linear integration.
+
+## Complete Directory Tree Structure
+
+```
+boardt/
+├── 📁 .cursor/
+│   └── 📁 rules/
+│       ├── cursor-rules.mdc
+│       ├── project-structure.mdc
+│       └── self-improve.mdc
+├── 📁 .kiro/
+├── 📄 DEVELOPMENT_STATUS.md
+├── 📁 docs/
+│   ├── canvas-implementation.md
+│   ├── chunk-creator-documentation.md
+│   ├── linear-api-integration.md
+│   ├── node-edge-components.md
+│   ├── README.md
+│   └── 📁 specs/
+│       └── 📁 storyboard-generator/
+│           ├── agent-assignments.md
+│           ├── agent-canvas-flow-architect.md
+│           ├── complete-instructions.md
+│           ├── design.md
+│           ├── requirements.md
+│           └── tasks.md
+├── 📁 node_modules/
+├── 📄 package.json
+├── 📄 pnpm-lock.yaml
+├── 📄 README.md
+├── 📁 src/
+│   ├── 📄 app.d.ts
+│   ├── 📄 app.html
+│   └── 📁 lib/
+│       └── 📁 components/
+│           ├── 📁 Canvas/
+│           │   ├── CanvasControls.svelte
+│           │   ├── CanvasView.svelte
+│           │   ├── CanvasView_simple.svelte
+│           │   ├── ChunkCreator.svelte
+│           │   ├── ChunkEdge.svelte
+│           │   ├── ChunkNode.svelte
+│           │   ├── ConnectionEdge.svelte
+│           │   ├── KeyframeInserter.svelte
+│           │   └── LinearIntegrationPanel.svelte
+│           ├── 📁 ImageGeneration/
+│           ├── 📁 SetView/
+│           │   ├── ChunkCard.svelte
+│           │   ├── ExportControls.svelte
+│           │   ├── PresentationView.svelte
+│           │   └── StoryFlowDiagram.svelte
+│           ├── 📁 StoryFlow/
+│           │   ├── BranchingLogic.svelte
+│           │   └── ConnectionValidator.svelte
+│           └── 📁 UI/
+│               └── LinearConfig.svelte
+│       ├── 📁 mcp/
+│       │   ├── 📁 linear/
+│       │   │   ├── createProjectAndIssues.ts
+│       │   │   ├── linearService.ts
+│       │   │   ├── syncService.ts
+│       │   │   └── types.ts
+│       │   ├── useMcpTool.js
+│       │   └── useMcpTool.ts
+│       ├── 📁 services/
+│       │   └── falai.js
+│       ├── 📁 stores/
+│       │   ├── imageGeneration.svelte.js
+│       │   ├── linearConfig.svelte.js
+│       │   ├── presentationMode.svelte.js
+│       │   ├── storyChunks.svelte.js
+│       │   └── ui.svelte.js
+│       └── 📁 types/
+│           ├── api.d.ts
+│           ├── components.d.ts
+│           └── storyboard.js
+│   ├── 📁 routes/
+│   │   └── +page.svelte
+│   └── 📁 test/
+│       ├── models.test.js
+│       ├── setup.js
+│       ├── simple.test.js
+│       ├── storyboard-basic.test.js
+│       ├── storyboard-comprehensive.test.js
+│       └── storyboard-models.test.js
+├── 📁 static/
+│   └── favicon.svg
+├── 📄 svelte.config.js
+├── 📄 tsconfig.json
+├── 📄 vite.config.js
+└── 📄 vitest.config.js
+```
+
+## Directory Branch Structure
+
+**Quick Reference:**
+- `docs > specs > storyboard-generator` - Project specifications and agent assignments
+- `src > lib > components > Canvas` - Canvas functionality
+- `src > lib > components > SetView` - Story presentation
+- `src > lib > components > StoryFlow` - Branching logic
+- `src > lib > components > UI` - General UI components
+- `src > lib > stores` - State management
+- `src > lib > services` - External integrations
+- `src > lib > mcp` - Model Context Protocol
+- `src > lib > types` - Type definitions
+- `src > test` - Test suite
+
+## Root Level Structure
+
+### Configuration Files
+- **`package.json`** - Project dependencies and scripts
+- **`pnpm-lock.yaml`** - Package manager lock file
+- **`svelte.config.js`** - SvelteKit configuration
+- **`tsconfig.json`** - TypeScript configuration
+- **`vite.config.js`** - Vite build tool configuration
+- **`vitest.config.js`** - Testing framework configuration
+- **`app.d.ts`** - SvelteKit app type definitions
+- **`app.html`** - Main HTML template
+
+### Development & Project Management
+- **`.kiro/`** - Project specifications and agent assignments (now moved to docs/specs)
+
+### Documentation
+- **`README.md`** - Project overview and setup instructions
+- **`DEVELOPMENT_STATUS.md`** - Current development status and roadmap
+- **`docs/`** - Detailed documentation
+  - `canvas-implementation.md` - Canvas functionality docs
+  - `chunk-creator-documentation.md` - Chunk creation system
+  - `linear-api-integration.md` - Linear API integration
+  - `node-edge-components.md` - Node and edge components
+  - `README.md` - Documentation index
+  - **`specs/storyboard-generator/`** - Storyboard generator specifications
+    - `agent-assignments.md` - Agent role assignments
+    - `agent-canvas-flow-architect.md` - Canvas flow architecture specs
+    - `complete-instructions.md` - Complete implementation instructions
+    - `design.md` - Design specifications
+    - `requirements.md` - Project requirements
+    - `tasks.md` - Task definitions and assignments
+
+## Source Code Structure (`src/`)
+
+### SvelteKit Structure
+```
+src/
+├── app.d.ts          # SvelteKit type definitions
+├── app.html          # Main app template
+├── routes/           # SvelteKit routes
+│   └── +page.svelte  # Main page component
+└── lib/              # Shared libraries and components
+```
+
+### Components (`src/lib/components/`)
+
+#### Canvas System (`Canvas/`)
+Core canvas functionality for storyboard creation:
+- **`CanvasView.svelte`** - Main canvas component
+- **`CanvasView_simple.svelte`** - Simplified canvas view
+- **`CanvasControls.svelte`** - Canvas control panel
+- **`ChunkCreator.svelte`** - Tool for creating story chunks
+- **`ChunkNode.svelte`** - Visual representation of story chunks
+- **`ChunkEdge.svelte`** - Connections between chunks
+- **`ConnectionEdge.svelte`** - Connection visualization
+- **`KeyframeInserter.svelte`** - Keyframe insertion tool
+- **`LinearIntegrationPanel.svelte`** - Linear API integration panel
+
+#### Story Presentation (`SetView/`)
+Components for viewing and presenting story content:
+- **`PresentationView.svelte`** - Main presentation component
+- **`StoryFlowDiagram.svelte`** - Story flow visualization
+- **`ChunkCard.svelte`** - Individual chunk display
+- **`ExportControls.svelte`** - Export functionality
+
+#### Story Flow Logic (`StoryFlow/`)
+Advanced story branching and validation:
+- **`BranchingLogic.svelte`** - Story branching logic
+- **`ConnectionValidator.svelte`** - Connection validation
+
+#### User Interface (`UI/`)
+General UI components:
+- **`LinearConfig.svelte`** - Linear API configuration
+
+#### Image Generation (`ImageGeneration/`)
+*Currently empty - reserved for future image generation features*
+
+### Services (`src/lib/services/`)
+- **`falai.js`** - FAL.ai service integration for image generation
+
+### State Management (`src/lib/stores/`)
+Svelte stores for application state:
+- **`storyChunks.svelte.js`** - Story chunk data management
+- **`imageGeneration.svelte.js`** - Image generation state
+- **`linearConfig.svelte.js`** - Linear API configuration
+- **`presentationMode.svelte.js`** - Presentation mode state
+- **`ui.svelte.js`** - General UI state
+
+### MCP Integration (`src/lib/mcp/`)
+Model Context Protocol integration for external tools:
+- **`useMcpTool.js`** - JavaScript MCP tool utilities
+- **`useMcpTool.ts`** - TypeScript MCP tool utilities
+- **`linear/`** - Linear-specific MCP integration
+  - `createProjectAndIssues.ts` - Project and issue creation
+  - `linearService.ts` - Linear API service
+  - `syncService.ts` - Synchronization service
+  - `types.ts` - Type definitions
+
+### Type Definitions (`src/lib/types/`)
+- **`api.d.ts`** - API-related type definitions
+- **`components.d.ts`** - Component type definitions
+- **`storyboard.js`** - Storyboard-specific types
+
+## Testing (`src/test/`)
+Comprehensive test suite:
+- **`setup.js`** - Test configuration and setup
+- **`models.test.js`** - Model-related tests
+- **`simple.test.js`** - Basic functionality tests
+- **`storyboard-basic.test.js`** - Basic storyboard tests
+- **`storyboard-comprehensive.test.js`** - Comprehensive storyboard tests
+- **`storyboard-models.test.js`** - Storyboard model tests
+
+## Static Assets (`static/`)
+- **`favicon.svg`** - Application favicon
+
+## Development and Build Artifacts
+- **`node_modules/`** - Installed dependencies
+- **`vite.config.js.timestamp-*`** - Vite build cache files
+
+## Key Architectural Patterns
+
+### Component Organization
+- **Canvas components**: Handle visual storyboard creation
+- **SetView components**: Manage story presentation and export
+- **StoryFlow components**: Handle complex branching logic
+- **UI components**: General-purpose interface elements
+
+### State Management
+- Centralized stores for different domains (story chunks, UI, image generation, Linear config)
+- Svelte's reactive stores for state management
+
+### Integration Points
+- **Linear API**: Project management integration via MCP
+- **FAL.ai**: Image generation service
+- **MCP**: Extensible tool integration framework
+
+### Testing Strategy
+- Comprehensive test coverage across models, components, and integration points
+- Separate test files for different functionality areas
+
+## File Naming Conventions
+
+### Components
+- **PascalCase** with `.svelte` extension (e.g., `CanvasView.svelte`)
+- Descriptive names indicating component purpose
+- Suffix patterns:
+  - `*View.svelte` - Main view components
+  - `*Panel.svelte` - Configuration/side panels
+  - `*Card.svelte` - Card-based displays
+  - `*Edge.svelte` - Connection/relationship components
+
+### Stores
+- **camelCase** with `.svelte.js` extension (e.g., `storyChunks.svelte.js`)
+- Domain-specific naming
+
+### Services
+- **camelCase** with `.js` extension (e.g., `falai.js`)
+
+### Types
+- **camelCase** with `.d.ts` or `.js` extension
+- Descriptive names for type collections
+
+## Development Workflow
+
+1. **Components**: Place in appropriate subfolder under `src/lib/components/`
+2. **Stores**: Add to `src/lib/stores/` following naming conventions
+3. **Services**: Add to `src/lib/services/` for external integrations
+4. **Types**: Add to `src/lib/types/` for shared type definitions
+5. **Tests**: Create corresponding test files in `src/test/`
+
+## Important Notes
+
+- This is a **SvelteKit** project with **TypeScript** support
+- Uses **pnpm** as the package manager
+- Implements **MCP** for tool integrations
+- Focuses on **storyboard creation** with **canvas-based editing**
+- Integrates with **Linear** for project management
+- Supports **image generation** via external services
+
+```typescript
+// Example: Adding a new canvas component
+// ✅ Place in: src/lib/components/Canvas/NewTool.svelte
+// ✅ Follow naming: PascalCase with descriptive suffix
+
+// Example: Adding a new store
+// ✅ Place in: src/lib/stores/newFeature.svelte.js
+// ✅ Follow naming: camelCase with .svelte.js extension
+```
